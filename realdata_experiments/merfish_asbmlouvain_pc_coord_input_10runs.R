@@ -40,6 +40,7 @@ for (run_id in seq_len(n_runs)) {
   fit_res <- aSBM_Louvain(
     AdjMat = adj_matrix,
     AttributeMat = attribute_data,
+    rho_tau = 0.8,
     T_outer = 100,
     init_method = "kmeans",
     resolution = target_resolution
