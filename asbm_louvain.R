@@ -1,6 +1,120 @@
-# aSBM-Louvain fitting routine and joint stopping rule.
-# Source asbmlou.R before sourcing this file so that the likelihood/update
-# helpers are available.
+# ==============================================================================
+# aSBM-Louvain: Attributed Network Clustering with Louvain-Based Block Structure Learning
+# ==============================================================================
+library('igraph')
+library('mvtnorm')
+
+# ------------------------------------------------------------------------------
+# Helper Functions
+# ------------------------------------------------------------------------------
+
+GaussianLikelihood <- function(DM, mean, cov){
+  mean <- as.vector(mean)
+  tryCatch({
+    dmvnorm(DM, mean = mean, sigma = cov, log = TRUE)
+  }, error = function(e) {
+    cov_fix <- cov + diag(1e-6, ncol(cov))
+    dmvnorm(DM, mean = mean, sigma = cov_fix, log = TRUE)
+  })
+}
+
+UpdateBlockParameters <- function(ExpMat, Network){
+  Num <- t(ExpMat) %*% Network %*% ExpMat
+  N_k <- colSums(ExpMat)
+  Denom <- outer(N_k, N_k) - crossprod(ExpMat)
+  NewBlockM <- Num / (Denom + 1e-10)
+  NewBlockM <- (NewBlockM + t(NewBlockM)) / 2
+  NewBlockM[NewBlockM > 0.999] <- 0.999
+  NewBlockM[NewBlockM < 0.001] <- 0.001
+  return(NewBlockM)
+}
+
+MuUpdate <- function(ExpMat, DataMat, commind){
+  denom <- sum(ExpMat[, commind]) + 1e-10
+  num <- colSums(DataMat * ExpMat[, commind])
+  return(num / denom)
+}
+
+CovMatUpdate <- function(Mu, ExpMat, DataMat, commind){
+  Mu <- as.vector(Mu)
+  Diff <- t(t(DataMat) - Mu)
+  w <- ExpMat[, commind]
+  denom <- sum(w) + 1e-10
+  CovMat <- (t(Diff) %*% (Diff * w)) / denom
+  CovMat <- CovMat + diag(1e-6, ncol(DataMat))
+  return(CovMat)
+}
+
+EstCovMat <- function(MVSamples){
+  if(nrow(MVSamples) < 2) return(diag(1, ncol(MVSamples)))
+  cov(MVSamples) + diag(1e-6, ncol(MVSamples))
+}
+
+# ------------------------------------------------------------------------------
+# Full-Bernoulli Structural Message & ELBO
+# ------------------------------------------------------------------------------
+
+StructuralMessageFullBernoulli <- function(Network, LastQ, Alpha){
+  LogP <- log(Alpha + 1e-10)
+  EdgeMsg <- as.matrix(Network %*% (LastQ %*% LogP))
+
+  LogOneMinusP <- log(1 - Alpha + 1e-10)
+  NonedgeComponent <- LastQ %*% LogOneMinusP
+  EdgeNonedgeComponent <- as.matrix(Network %*% NonedgeComponent)
+  AllNodesComponent <- matrix(
+    rep(colSums(NonedgeComponent), each = nrow(Network)),
+    nrow = nrow(Network)
+  )
+
+  EdgeMsg + AllNodesComponent - NonedgeComponent - EdgeNonedgeComponent
+}
+
+Calculate_ELBO <- function(AttributeMat, StoreMean, StoreCov, Alpha, PriorPi, q_curr, Network, Tau){
+  K <- ncol(q_curr)
+
+  LL_X_Val <- 0
+  for(k in 1:K){
+    ll_vec <- GaussianLikelihood(AttributeMat, StoreMean[[k]], StoreCov[[k]])
+    LL_X_Val <- LL_X_Val + sum(q_curr[, k] * ll_vec)
+  }
+
+  GraphLL_Matrix <- StructuralMessageFullBernoulli(Network, q_curr, Alpha)
+  LL_A_Val <- 0.5 * sum(q_curr * GraphLL_Matrix)
+
+  log_q <- log(q_curr + 1e-20)
+  log_pi <- log(PriorPi + 1e-20)
+  KL_Val <- sum(q_curr * (log_q - log_pi))
+
+  Total_ELBO <- LL_A_Val + LL_X_Val - max(Tau, 1e-5) * KL_Val
+  return(Total_ELBO)
+}
+
+# ------------------------------------------------------------------------------
+# Variational E-Step
+# ------------------------------------------------------------------------------
+
+VariationalEStep_Strict <- function(AttributeMat, StoreMean, StoreCov, Alpha, PriorPi, Tau, Network, LastQ){
+  N <- nrow(AttributeMat)
+  K <- ncol(LastQ)
+
+  AttributeLL <- matrix(0, nrow = N, ncol = K)
+  for(k in 1:K){
+    AttributeLL[, k] <- GaussianLikelihood(AttributeMat, StoreMean[[k]], StoreCov[[k]])
+  }
+
+  GraphLL <- StructuralMessageFullBernoulli(Network, LastQ, Alpha)
+
+  SafeTau <- max(Tau, 1e-5)
+  LogUnnormalized <- log(PriorPi + 1e-20) + (GraphLL + AttributeLL) / SafeTau
+
+  NextQ <- t(apply(LogUnnormalized, 1, function(x) {
+    mx <- max(x)
+    ex <- exp(x - mx)
+    return(ex / sum(ex))
+  }))
+
+  return(NextQ)
+}
 
 align_partition_max_overlap <- function(reference, candidate) {
   reference <- as.numeric(factor(reference))

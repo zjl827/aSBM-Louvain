@@ -8,7 +8,8 @@ out<-Sys.getenv('REVISION_TIMING_OUT',file.path('results','timing_current',stage
 for(d in c(out,file.path(out,'runs'),file.path(out,'data'),file.path(out,'warmup')))dir.create(d,recursive=TRUE,showWarnings=FALSE)
 vars<-c('OMP_NUM_THREADS','OPENBLAS_NUM_THREADS','VECLIB_MAXIMUM_THREADS','BLAS_NUM_THREADS','MKL_NUM_THREADS')
 stopifnot(all(Sys.getenv(vars)=='1'),identical(as.integer(formals(stats::kmeans)$iter.max),10L))
-source(file.path(code,'asbmlou.R'));source(file.path(code,'fit_asbm_louvain.R'))
+algorithm<-'../asbm_louvain.R'
+source(algorithm)
 source(file.path(code,'pure_asbm_vectorized.R'))
 source(file.path(work,'generate.R'))
 tasks_path<-file.path(work,'tasks.csv')
@@ -23,7 +24,7 @@ stopifnot(!anyNA(input_hashes))
 hash_object<-function(x){f<-tempfile();on.exit(unlink(f));saveRDS(x,f,compress=FALSE,version=3);unname(tools::md5sum(f))}
 atomic_rds<-function(x,p){saveRDS(x,paste0(p,'.tmp'));stopifnot(file.rename(paste0(p,'.tmp'),p))}
 atomic_csv<-function(x,p){write.csv(x,paste0(p,'.tmp'),row.names=FALSE,na='');stopifnot(file.rename(paste0(p,'.tmp'),p))}
-code_hashes<-tools::md5sum(c(file.path(code,c('asbmlou.R','fit_asbm_louvain.R','pure_asbm_vectorized.R')),script,file.path(work,'generate.R')))
+code_hashes<-tools::md5sum(c(algorithm,file.path(code,'pure_asbm_vectorized.R'),script,file.path(work,'generate.R')))
 tasks_hash<-unname(tools::md5sum(tasks_path))
 run_hash<-hash_object(list(code_hashes=code_hashes,tasks_hash=tasks_hash,input_hashes=input_hashes))
 metadata<-list(stage=stage,start_time=as.character(Sys.time()),run_hash=run_hash,code_hashes=code_hashes,

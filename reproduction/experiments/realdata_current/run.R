@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 # Refit the four graph/attribute methods used in the orientation experiment.
 suppressPackageStartupMessages({library(igraph); library(Matrix); library(mclust); library(mvtnorm)})
-source("code/asbmlou.R")
-source("code/fit_asbm_louvain.R")
+algorithm <- "../asbm_louvain.R"
+source(algorithm)
 source("code/pure_asbm_vectorized.R")
 stopifnot(formals(stats::kmeans)$iter.max == 10L, eval(formals(stats::kmeans)$algorithm)[1L] == "Hartigan-Wong")
 input <- Sys.getenv("REVISION_REALDATA_DIR", "results/realdata_current/inputs")
@@ -15,7 +15,7 @@ orientations <- c("expression_graph_spatial_attributes", "spatial_graph_expressi
 if (length(args)) orientations <- orientations[1L]
 methods <- c("Proposed", "Pure_aSBM", "Louvain", "KMeans_estK")
 dir.create(file.path(output, "runs"), showWarnings = FALSE, recursive = TRUE)
-core_files <- c("code/asbmlou.R", "code/fit_asbm_louvain.R", "code/pure_asbm_vectorized.R",
+core_files <- c(algorithm, "code/pure_asbm_vectorized.R",
   "experiments/realdata_current/run.R")
 code_md5 <- tools::md5sum(core_files)
 capture.output(sessionInfo(), file = file.path(output, "R_sessionInfo.txt"))

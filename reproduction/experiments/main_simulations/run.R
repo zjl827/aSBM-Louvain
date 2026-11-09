@@ -1,8 +1,7 @@
 #!/usr/bin/env Rscript
 # Refit the four methods on each independently generated balanced network.
 suppressPackageStartupMessages({
-  source("code/asbmlou.R")
-  source("code/fit_asbm_louvain.R")
+  source("../asbm_louvain.R")
   source("code/simulation_design.R")
 })
 

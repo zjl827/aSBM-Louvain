@@ -1,8 +1,7 @@
 # Isolated, unchanged baseline environment; beta changes only the two likelihood expressions.
-make_model <- function(code_dir, beta = NULL) {
+make_model <- function(model_source, beta = NULL) {
   e <- new.env(parent = .GlobalEnv)
-  sys.source(file.path(code_dir, "asbmlou.R"), envir = e)
-  sys.source(file.path(code_dir, "fit_asbm_louvain.R"), envir = e)
+  sys.source(model_source, envir = e)
   if (!is.null(beta)) {
     stopifnot(length(beta) == 1L, is.finite(beta), beta >= 0)
     e$attribute_beta <- beta

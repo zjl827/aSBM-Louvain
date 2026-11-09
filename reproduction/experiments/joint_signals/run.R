@@ -5,8 +5,7 @@ script <- normalizePath(sub("^--file=", "", args[startsWith(args, "--file=")][1]
 script_dir <- dirname(script)
 workspace <- normalizePath(file.path(script_dir, "..", ".."))
 code <- file.path(workspace, "code")
-source(file.path(code, "asbmlou.R"))
-source(file.path(code, "fit_asbm_louvain.R"))
+source(file.path(workspace, "..", "asbm_louvain.R"))
 source(file.path(code, "pure_asbm_vectorized.R"))
 source(file.path(workspace, "experiments", "weight_misspecification", "design_helpers.R"))
 

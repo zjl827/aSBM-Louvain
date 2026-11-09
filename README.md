@@ -2,6 +2,21 @@
 
 Code for the experiments in *aSBM-Louvain: Attributed Network Clustering with Louvain-Based Block Structure Learning*. The method combines an attributed stochastic block model with Louvain community detection.
 
+## Run aSBM-Louvain
+
+From the repository root, load the algorithm and fit it to an undirected graph.
+`A` is its symmetric adjacency matrix and `X` is a numeric matrix with one row
+per node in the same order. [Algorithm source](asbm_louvain.R)
+
+```r
+install.packages(c("igraph", "mvtnorm"))
+source("asbm_louvain.R")
+fit <- aSBM_Louvain_revised(A, X)
+labels <- fit$partition
+```
+
+For sparse adjacency matrices, load the `Matrix` package before fitting.
+
 ## Reproducing the experiments
 
 Run the commands in the experiment guide from `reproduction/`. The guide covers dependencies, input data, and the outputs of each experiment. [Setup and run instructions](reproduction/README.md)
@@ -10,5 +25,3 @@ Run the commands in the experiment guide from `reproduction/`. The guide covers 
 - The supplementary experiments are indexed by section number. [Supplementary experiments](reproduction/README.md#supplementary-experiments)
 - The STARmap and MERFISH instructions show how to prepare the input data and run the accuracy and timing comparisons. [Real-data experiments](reproduction/experiments/realdata_current/README.md) · [Timing experiments](reproduction/experiments/timing_current/README.md)
 - The BACT and SpaGCN scripts use their own input and dependency setup. [Baseline scripts](realdata_experiments/) · [Baseline setup](https://github.com/zjl827/aSBM-Louvain/blob/bf6b721df90ad321efc8e1026d26ab27a6a60e57/README.md#real-data-experiments)
-
-The core R entry point is `aSBM_Louvain_revised()`. [Source files and loading order](reproduction/README.md#implementation)

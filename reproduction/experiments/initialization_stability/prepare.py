@@ -6,11 +6,9 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(os.environ.get('INIT_OUTPUT', ROOT / 'outputs/initialization_stability'))
 for directory in [OUT/'data', OUT/'initializations', OUT/'runs']:
     directory.mkdir(parents=True, exist_ok=True)
-sources = {}
-for name in ['asbmlou.R', 'fit_asbm_louvain.R']:
-    src = ROOT / 'code' / name
-    sources[name] = {'file': str(src.relative_to(ROOT)),
-                     'sha256': hashlib.sha256(src.read_bytes()).hexdigest()}
+model_source = ROOT.parent / 'asbm_louvain.R'
+sources = {model_source.name: {'file': model_source.name,
+                               'sha256': hashlib.sha256(model_source.read_bytes()).hexdigest()}}
 conditions = []
 datasets = []
 tasks = []
@@ -66,6 +64,9 @@ for name, rows in [('conditions.csv',conditions),('datasets.csv',datasets),('tas
     else:path.write_text(data)
 path=OUT/'protocol.json'
 data=json.dumps(protocol,indent=2,ensure_ascii=False)+'\n'
-if path.exists():assert path.read_text()==data
-else:path.write_text(data)
+if path.exists():
+    if path.read_text() != data:
+        raise ValueError('Use a new INIT_OUTPUT directory for the current implementation.')
+else:
+    path.write_text(data)
 print(f'Frozen {len(datasets)} datasets; {len(tasks)} planned fits. Sources:',sources)

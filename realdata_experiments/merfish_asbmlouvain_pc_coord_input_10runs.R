@@ -10,7 +10,7 @@ script_file <- normalizePath(
 source(file.path(dirname(script_file), "realdata_submission_helpers.R"))
 
 paths <- submission_paths(script_file)
-source("asbmlou.R")
+source(file.path(paths$project_root, "asbm_louvain.R"))
 
 suppressPackageStartupMessages({
   library(FNN)
@@ -37,7 +37,7 @@ labels_df <- data.frame(Cell = common_cells, GroundTruth = true_labels, stringsA
 
 for (run_id in seq_len(n_runs)) {
   set.seed(42 + run_id)
-  fit_res <- aSBM_Louvain(
+  fit_res <- aSBM_Louvain_revised(
     AdjMat = adj_matrix,
     AttributeMat = attribute_data,
     rho_tau = 0.8,

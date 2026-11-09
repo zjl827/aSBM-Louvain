@@ -18,7 +18,7 @@ python3 -m pip install -r requirements.txt
 
 ## Implementation
 
-`code/asbmlou.R` and `code/fit_asbm_louvain.R` contain the aSBM-Louvain implementation used in the experiments. Source them in that order and call `aSBM_Louvain_revised()`. The standard configuration uses attribute K-means initialization with a Louvain estimate of the number of groups, prior feedback, and the joint stopping rule. Each runner sets the parameters specific to its experiment.
+The experiment scripts load the repository's `asbm_louvain.R` and call `aSBM_Louvain_revised()`. The standard configuration uses attribute K-means initialization with a Louvain estimate of the number of groups, prior feedback, and the joint stopping rule. Each runner sets the parameters specific to its experiment. [Algorithm source](../asbm_louvain.R)
 
 The aSBM baseline in `code/pure_asbm_vectorized.R` preserves the per-pair denominator floor using the vectorized R implementation. For a fresh run, use an output directory without checkpoints from another version.
 

@@ -62,7 +62,7 @@ sigma_vals_B <- seq(0.5, 5.0, by = 0.5)
 
 # ---- Run baselines (Louvain / KMeans / aSBM-Louvain) ----
 run_baselines <- function(mode, sigma = 3.0, reps = 5L, base_seed = 20260518) {
-  source("asbmlou.R")
+  source("asbm_louvain.R")
 
   if (mode == "A") {
     sc_list <- A_scenarios
@@ -96,7 +96,7 @@ run_baselines <- function(mode, sigma = 3.0, reps = 5L, base_seed = 20260518) {
         lou <- as.numeric(factor(membership(cluster_louvain(dat$graph))))
         km <- as.numeric(factor(kmeans(dat$X, centers = sc$K, nstart = 10)$cluster))
         capture.output({
-          fit <- aSBM_Louvain(dat$A, dat$X, T_outer = 20,
+          fit <- aSBM_Louvain_revised(dat$A, dat$X, T_outer = 20,
             rho_tau = 0.8, tau0 = 1.0, resolution = 1.0, init_method = "kmeans")
         })
 

@@ -10,8 +10,7 @@ suppressPackageStartupMessages({
 script <- normalizePath(sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1L]))
 suite <- dirname(script)
 code <- normalizePath(file.path(suite, "../../code"))
-source(file.path(code, "asbmlou.R"))
-source(file.path(code, "fit_asbm_louvain.R"))
+source(file.path(suite, "../../../asbm_louvain.R"))
 source(file.path(code, "pure_asbm_vectorized.R"))
 source(file.path(code, "simulation_design.R"))
 

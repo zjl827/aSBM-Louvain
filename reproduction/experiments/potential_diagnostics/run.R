@@ -10,19 +10,19 @@ suppressPackageStartupMessages({
 script <- normalizePath(sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1L]))
 suite <- dirname(script)
 code <- normalizePath(file.path(suite, "../../code"))
-source(file.path(code, "asbmlou.R"))
-source(file.path(code, "fit_asbm_louvain.R"))
+model_source <- file.path(dirname(dirname(code)), "asbm_louvain.R")
+source(model_source, keep.source = TRUE)
 source(file.path(code, "pure_asbm_vectorized.R"))
 source(file.path(code, "simulation_design.R"))
 
-# Instrument the frozen wrapper without altering its update or stopping logic.
+# Instrument the fitting routine without redefining its shared helpers.
 replace_one <- function(text, needle, replacement) {
   hits <- gregexpr(needle, text, fixed = TRUE)[[1L]]
   if (length(hits) != 1L || hits[1L] < 0L) stop("Unexpected wrapper structure: ", needle)
   sub(needle, replacement, text, fixed = TRUE)
 }
-wrapper <- paste(readLines(file.path(code, "fit_asbm_louvain.R")), collapse = "\n")
-observer <- replace_one(wrapper, "aSBM_Louvain_revised <- function(", "aSBM_Louvain_traced <- function(")
+fit_source <- paste(as.character(getSrcref(aSBM_Louvain_revised)), collapse = "\n")
+observer <- paste0("aSBM_Louvain_traced <- ", fit_source)
 observer <- replace_one(observer, "    verbose = FALSE) {", "    verbose = FALSE, diagnostic_alpha = 1) {")
 observer <- replace_one(observer, "  for (t in seq_len(T_outer)) {",
                         "  diagnostic_previous <- NULL\n  diagnostic_rows <- list()\n  for (t in seq_len(T_outer)) {")

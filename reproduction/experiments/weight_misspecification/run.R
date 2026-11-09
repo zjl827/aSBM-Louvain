@@ -2,21 +2,21 @@
 suppressPackageStartupMessages({library(igraph); library(mvtnorm); library(mclust)})
 script <- normalizePath(sub("^--file=", "", commandArgs(FALSE)[startsWith(commandArgs(FALSE), "--file=")][1]))
 wd <- dirname(script); root <- normalizePath(file.path(wd, "../..")); code <- file.path(root, "code")
+model_source <- file.path(dirname(root), "asbm_louvain.R")
 source(file.path(code, "weighted_model.R"))
 source(file.path(wd, "design_helpers.R"))
 source(file.path(code, "pure_asbm_vectorized.R"))
 stopifnot(formals(stats::kmeans)$iter.max == 10L)
 betas <- c(0, 0.25, 0.5, 1, 2, 4)
-models <- setNames(lapply(betas, function(b) make_model(code, b)), as.character(betas))
-baseline <- make_model(code)
+models <- setNames(lapply(betas, function(b) make_model(model_source, b)), as.character(betas))
+baseline <- make_model(model_source)
 smoke <- Sys.getenv("WM_SMOKE", "0") == "1"
 out <- Sys.getenv("WM_OUTPUT", file.path(root, "outputs/weight_misspecification"))
 workers <- as.integer(Sys.getenv("WM_WORKERS", "4")); reps <- if (smoke) 1L else 10L
 dir.create(file.path(out, "runs"), recursive=TRUE, showWarnings=FALSE)
 dir.create(file.path(out, "data_cache"), recursive=TRUE, showWarnings=FALSE)
 files <- c(script, file.path(wd, c("design_helpers.R", "protocol.md")),
-           file.path(code, c("weighted_model.R", "asbmlou.R", "fit_asbm_louvain.R",
-                             "pure_asbm_vectorized.R")))
+           model_source, file.path(code, c("weighted_model.R", "pure_asbm_vectorized.R")))
 manifest <- tools::md5sum(files); manifest_hash <- hash_object(manifest)
 manifest_file <- file.path(out, "manifest.rds")
 if (file.exists(manifest_file)) {

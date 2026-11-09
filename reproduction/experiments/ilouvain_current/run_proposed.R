@@ -7,8 +7,8 @@ out <- Sys.getenv("REVISION_DANCER_OUT", "results/ilouvain_current")
 for (d in c(out, file.path(out, "runs"), file.path(out, "partitions"))) {
   dir.create(d, recursive = TRUE, showWarnings = FALSE)
 }
-core <- c("code/asbmlou.R", "code/fit_asbm_louvain.R")
-for (p in core) source(p)
+core <- "../asbm_louvain.R"
+source(core)
 jobs <- read.csv(file.path(work, "jobs.csv"), stringsAsFactors = FALSE)
 args <- commandArgs(TRUE)
 if (length(args)) {

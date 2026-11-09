@@ -4,18 +4,18 @@ script <- normalizePath(sub("^--file=", "", commandArgs(FALSE)[startsWith(comman
 wd <- dirname(script); root <- normalizePath(file.path(wd, "../.."))
 previous <- file.path(root, "experiments", "weight_misspecification")
 code <- file.path(root, "code")
+model_source <- file.path(dirname(root), "asbm_louvain.R")
 source(file.path(code, "weighted_model.R"))
 source(file.path(previous, "design_helpers.R"))
 source(file.path(code, "pure_asbm_vectorized.R"))
-model <- make_model(code)
+model <- make_model(model_source)
 stopifnot(formals(stats::kmeans)$iter.max == 10L)
 smoke <- Sys.getenv("DIM_SMOKE", "0") == "1"
 out <- Sys.getenv("DIM_PILOT_OUTPUT", file.path(root, "outputs/dimension_pilot"))
 workers <- as.integer(Sys.getenv("DIM_WORKERS", "2")); reps <- if(smoke)1L else 10L
 for(sub in c("runs","data_cache"))dir.create(file.path(out,sub), recursive=TRUE, showWarnings=FALSE)
 files <- c(script, file.path(previous, "design_helpers.R"),
-           file.path(code, c("weighted_model.R", "asbmlou.R", "fit_asbm_louvain.R",
-                             "pure_asbm_vectorized.R")),
+           model_source, file.path(code, c("weighted_model.R", "pure_asbm_vectorized.R")),
            file.path(wd, "protocol.md"))
 manifest <- tools::md5sum(files); manifest_hash <- hash_object(manifest)
 mf <- file.path(out,"manifest.rds")

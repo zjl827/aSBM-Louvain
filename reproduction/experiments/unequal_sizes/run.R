@@ -10,8 +10,7 @@ script <- normalizePath(sub("^--file=", "", grep("^--file=", commandArgs(FALSE),
 suite <- dirname(script)
 code <- normalizePath(file.path(suite, "../../code"))
 model <- new.env(parent = .GlobalEnv)
-sys.source(file.path(code, "asbmlou.R"), envir = model)
-sys.source(file.path(code, "fit_asbm_louvain.R"), envir = model)
+sys.source(file.path(suite, "../../../asbm_louvain.R"), envir = model)
 source(file.path(code, "pure_asbm_vectorized.R"))
 source(file.path(code, "simulation_design.R"))
 

@@ -2,12 +2,12 @@
 suppressPackageStartupMessages({library(igraph);library(mvtnorm);library(mclust)})
 script<-normalizePath(sub('^--file=','',commandArgs(FALSE)[startsWith(commandArgs(FALSE),'--file=')][1]))
 work<-dirname(script);root<-normalizePath(file.path(work,'../..'));out <- Sys.getenv('INIT_OUTPUT', file.path(root, 'outputs/initialization_stability'))
-code <- file.path(root, 'code')
-source(file.path(code, 'asbmlou.R'));source(file.path(code, 'fit_asbm_louvain.R'))
+model_source <- file.path(dirname(root), 'asbm_louvain.R')
+source(model_source)
 stopifnot(formals(stats::kmeans)$iter.max==10L)
 stage<-Sys.getenv('INIT_STAGE','smoke');stopifnot(stage%in%c('smoke','full','validate'))
 hash_object<-function(x){p<-tempfile('init_hash_');on.exit(unlink(p));saveRDS(x,p,compress=FALSE,version=3);unname(tools::md5sum(p))}
-source_files<-c(file.path(code, 'asbmlou.R'),file.path(code, 'fit_asbm_louvain.R'),script,file.path(out,'protocol.json'),file.path(out,'datasets.csv'),file.path(out,'tasks.csv'))
+source_files<-c(model_source,script,file.path(out,'protocol.json'),file.path(out,'datasets.csv'),file.path(out,'tasks.csv'))
 manifest<-tools::md5sum(source_files);manifest_hash<-hash_object(manifest)
 if(file.exists(file.path(out,'manifest.rds')))stopifnot(identical(manifest,readRDS(file.path(out,'manifest.rds')))) else {
  saveRDS(manifest,file.path(out,'manifest.rds'))

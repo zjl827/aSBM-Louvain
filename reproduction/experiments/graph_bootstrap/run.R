@@ -8,7 +8,8 @@ out<-Sys.getenv('REVISION_BOOTSTRAP_OUT',file.path('results','graph_bootstrap',s
 dir.create(out,recursive=TRUE,showWarnings=FALSE)
 for(d in c('base','models','graphs','runs','partitions'))dir.create(file.path(out,d),recursive=TRUE,showWarnings=FALSE)
 source(file.path(work,'boot_helpers.R'));source(file.path(work,'simulate_source.R'))
-source('code/asbmlou.R');source('code/fit_asbm_louvain.R');source('code/pure_asbm_vectorized.R')
+algorithm<-'../asbm_louvain.R'
+source(algorithm);source('code/pure_asbm_vectorized.R')
 stopifnot(formals(stats::kmeans)$iter.max==10L)
 workers<-as.integer(Sys.getenv('REVISION_BOOTSTRAP_WORKERS',if(.Platform$OS.type=='windows')'1' else '2'))
 stopifnot(workers>=1L,workers<=2L, .Platform$OS.type!='windows' || workers==1L)
@@ -23,7 +24,7 @@ if(stage=='smoke') {
 real_sources<-sources$dataset[sources$kind=='real']
 input_paths<-if(length(real_sources))file.path(real_input,paste0(real_sources,'__expression_graph_spatial_attributes.rds')) else character()
 freeze_files<-c(script,file.path(work,c('boot_helpers.R','simulate_source.R','protocol.json','sources.csv','tasks.csv')),
-  file.path('code',c('asbmlou.R','fit_asbm_louvain.R','pure_asbm_vectorized.R')),input_paths)
+  algorithm,'code/pure_asbm_vectorized.R',input_paths)
 manifest<-tools::md5sum(freeze_files);stopifnot(!anyNA(manifest));manifest_hash<-gb_hash(manifest)
 if(file.exists(file.path(out,'manifest.rds'))) {
   if(!identical(manifest,readRDS(file.path(out,'manifest.rds')))) {
