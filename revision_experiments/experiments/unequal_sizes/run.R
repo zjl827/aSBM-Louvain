@@ -14,11 +14,6 @@ sys.source(file.path(code, "asbmlou.R"), envir = model)
 sys.source(file.path(code, "asbmlou_revised_stop.R"), envir = model)
 source(file.path(code, "pure_asbm_vectorized.R"))
 source(file.path(code, "simulation_design.R"))
-native <- file.path(code, paste0("pure_asbm_floor_correction", .Platform$dynlib.ext))
-if (!is.loaded("pure_asbm_floor_correction_c") && file.exists(native)) dyn.load(native)
-if (!is.loaded("pure_asbm_floor_correction_c")) {
-  stop("Build the native Pure-aSBM backend first: R CMD SHLIB code/pure_asbm_floor_correction.c")
-}
 
 args <- commandArgs(TRUE)
 if (!length(args)) stop("Usage: Rscript experiments/unequal_sizes/run.R OUTPUT_DIR [CASE_ID ...]")

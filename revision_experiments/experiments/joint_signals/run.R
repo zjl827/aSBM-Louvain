@@ -7,12 +7,8 @@ workspace <- normalizePath(file.path(script_dir, "..", ".."))
 code <- file.path(workspace, "code")
 source(file.path(code, "asbmlou.R"))
 source(file.path(code, "asbmlou_revised_stop.R"))
-native <- file.path(code, paste0("pure_asbm_floor_correction", .Platform$dynlib.ext))
-if (!file.exists(native)) stop("Compile the aSBM baseline with R CMD SHLIB code/pure_asbm_floor_correction.c")
-if (!is.loaded("pure_asbm_floor_correction_c")) dyn.load(native)
 source(file.path(code, "pure_asbm_vectorized.R"))
 source(file.path(workspace, "experiments", "weight_misspecification", "design_helpers.R"))
-stopifnot(is.loaded("pure_asbm_floor_correction_c"))
 
 out <- Sys.getenv("PILOT_OUTPUT", file.path(workspace, "outputs", "joint_signals"))
 dir.create(file.path(out, "runs"), recursive = TRUE, showWarnings = FALSE)
@@ -24,7 +20,11 @@ workers <- as.integer(Sys.getenv("PILOT_WORKERS", "4"))
 smoke <- Sys.getenv("PILOT_SMOKE", "0") == "1"
 if (smoke) { grid <- grid[grid$condition_id %in% c("C01", "C14", "C16"), ]; reps <- 1L }
 r_values <- c(1.5, 3, 4, 7.5)
-version <- "proposed_consistent_pilot_v1"
+version <- "proposed_consistent_pilot_v1_pure_r"
+settings_path <- file.path(out, "run_settings.rds")
+if (file.exists(settings_path) && !identical(readRDS(settings_path)$version, version)) {
+  stop("Use a new PILOT_OUTPUT directory for the current implementation.")
+}
 settings <- list(stage = if (smoke) "smoke" else "pilot", repetitions = reps,
                  workers = workers, version = version, N = 1000L, K = 5L, D = 50L,
                  tau0 = 1, rho_tau = 0.8, resolution = 1,
@@ -33,8 +33,8 @@ settings <- list(stage = if (smoke) "smoke" else "pilot", repetitions = reps,
                  effective_tau_floor = 1e-5, pure_tolerance = 1,
                  per_fit_timeout_sec = 300, RNG_kind = RNGkind(),
                  R_session = capture.output(sessionInfo()),
-                 runtime_warning = "Parallel diagnostic timings; native-accelerated Pure baseline; not benchmark timings.")
-saveRDS(settings, file.path(out, "run_settings.rds"))
+                 runtime_warning = "Parallel diagnostic timings with vectorized R aSBM.")
+saveRDS(settings, settings_path)
 capture.output(str(settings), file = file.path(out, "run_settings.txt"))
 
 fit_safely <- function(fun) {

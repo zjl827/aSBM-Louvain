@@ -4,8 +4,6 @@ suppressPackageStartupMessages({library(igraph); library(Matrix); library(mclust
 source("code/asbmlou.R")
 source("code/asbmlou_revised_stop.R")
 source("code/pure_asbm_vectorized.R")
-native <- Sys.getenv("REVISION_PURE_NATIVE")
-if (nzchar(native) && !is.loaded("pure_asbm_floor_correction_c")) dyn.load(native)
 stopifnot(formals(stats::kmeans)$iter.max == 10L, eval(formals(stats::kmeans)$algorithm)[1L] == "Hartigan-Wong")
 input <- Sys.getenv("REVISION_REALDATA_DIR", "results/realdata_current/inputs")
 output <- Sys.getenv("REVISION_REALDATA_OUT", "results/realdata_current")
@@ -19,10 +17,6 @@ methods <- c("Proposed", "Pure_aSBM", "Louvain", "KMeans_estK")
 dir.create(file.path(output, "runs"), showWarnings = FALSE, recursive = TRUE)
 core_files <- c("code/asbmlou.R", "code/asbmlou_revised_stop.R", "code/pure_asbm_vectorized.R",
   "experiments/realdata_current/run.R")
-if (is.loaded("pure_asbm_floor_correction_c")) {
-  native_loaded <- getNativeSymbolInfo("pure_asbm_floor_correction_c")$dll[["path"]]
-  core_files <- c(core_files, native_loaded)
-}
 code_md5 <- tools::md5sum(core_files)
 capture.output(sessionInfo(), file = file.path(output, "R_sessionInfo.txt"))
 
@@ -105,7 +99,9 @@ for (dataset in datasets) for (orientation in orientations) {
     dest <- file.path(output, "runs", paste0(id, ".rds"))
     if (file.exists(dest)) {
       record <- readRDS(dest)
-      stopifnot(identical(record$input_md5, input_md5), identical(record$code_md5, code_md5))
+      if (!identical(record$input_md5, input_md5) || !identical(record$code_md5, code_md5)) {
+        stop("Saved real-data checkpoints use different code or inputs. Set REVISION_REALDATA_OUT to a fresh directory.")
+      }
     } else {
       record <- run_case(dat, dataset, orientation, rep)
       record$input_md5 <- input_md5

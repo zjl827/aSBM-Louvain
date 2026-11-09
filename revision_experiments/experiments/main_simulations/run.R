@@ -6,11 +6,6 @@ suppressPackageStartupMessages({
   source("code/simulation_design.R")
 })
 
-native <- file.path("code", paste0("pure_asbm_floor_correction", .Platform$dynlib.ext))
-if (!file.exists(native)) {
-  stop("Build the accuracy benchmark backend first: cd code && R CMD SHLIB pure_asbm_floor_correction.c")
-}
-dyn.load(native)
 source("code/pure_asbm_vectorized.R")
 
 tasks <- read.csv("experiments/main_simulations/tasks.csv", stringsAsFactors = FALSE)

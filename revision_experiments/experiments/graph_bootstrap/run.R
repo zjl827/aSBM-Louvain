@@ -9,11 +9,6 @@ dir.create(out,recursive=TRUE,showWarnings=FALSE)
 for(d in c('base','models','graphs','runs','partitions'))dir.create(file.path(out,d),recursive=TRUE,showWarnings=FALSE)
 source(file.path(work,'boot_helpers.R'));source(file.path(work,'simulate_source.R'))
 source('code/asbmlou.R');source('code/asbmlou_revised_stop.R');source('code/pure_asbm_vectorized.R')
-native<-Sys.getenv('REVISION_PURE_NATIVE')
-if(nzchar(native)&&!is.loaded('pure_asbm_floor_correction_c'))dyn.load(native)
-if(!is.loaded('pure_asbm_floor_correction_c')) {
-  stop("Compile the exact denominator correction first with R CMD SHLIB code/pure_asbm_floor_correction.c")
-}
 stopifnot(formals(stats::kmeans)$iter.max==10L)
 workers<-as.integer(Sys.getenv('REVISION_BOOTSTRAP_WORKERS',if(.Platform$OS.type=='windows')'1' else '2'))
 stopifnot(workers>=1L,workers<=2L, .Platform$OS.type!='windows' || workers==1L)
@@ -28,11 +23,12 @@ if(stage=='smoke') {
 real_sources<-sources$dataset[sources$kind=='real']
 input_paths<-if(length(real_sources))file.path(real_input,paste0(real_sources,'__expression_graph_spatial_attributes.rds')) else character()
 freeze_files<-c(script,file.path(work,c('boot_helpers.R','simulate_source.R','protocol.json','sources.csv','tasks.csv')),
-  file.path('code',c('asbmlou.R','asbmlou_revised_stop.R','pure_asbm_vectorized.R','pure_asbm_floor_correction.c')),
-  getNativeSymbolInfo('pure_asbm_floor_correction_c')$dll[['path']],input_paths)
+  file.path('code',c('asbmlou.R','asbmlou_revised_stop.R','pure_asbm_vectorized.R')),input_paths)
 manifest<-tools::md5sum(freeze_files);stopifnot(!anyNA(manifest));manifest_hash<-gb_hash(manifest)
 if(file.exists(file.path(out,'manifest.rds'))) {
-  stopifnot(identical(manifest,readRDS(file.path(out,'manifest.rds'))))
+  if(!identical(manifest,readRDS(file.path(out,'manifest.rds')))) {
+    stop('Saved bootstrap checkpoints use different code or inputs. Set REVISION_BOOTSTRAP_OUT to a fresh directory.')
+  }
 } else {
   gb_write_rds(manifest,file.path(out,'manifest.rds'))
   write.csv(data.frame(path=names(manifest),md5=unname(manifest)),file.path(out,'manifest.csv'),row.names=FALSE)

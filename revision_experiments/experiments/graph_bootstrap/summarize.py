@@ -15,7 +15,6 @@ from pathlib import Path
 
 import numpy as np
 
-METHOD_ORDER = ['Proposed', 'Pure_aSBM_C', 'Louvain', 'KMeans_estK']
 ARM_ORDER = ['graph_only', 'joint']
 MISS = {'', 'NA', 'NaN', 'nan', 'None', 'null', 'N/A'}
 METRICS = ['ARI_anchor', 'ARI_own_source', 'ARI_original_truth', 'NMI_anchor',
@@ -199,7 +198,7 @@ def audit_partitions(root, rows, base, out):
     return checked,failures,partition_cache
 
 
-def audit_design(root, rows, base, manifest, sources, expected_b):
+def audit_design(root, rows, base, manifest, sources, expected_b, method_order):
     checks=[]
     def add(name,ok,detail): checks.append(dict(check=name,passed=bool(ok),detail=str(detail)))
     keys=[row_key(r) for r in rows]
@@ -213,14 +212,14 @@ def audit_design(root, rows, base, manifest, sources, expected_b):
         smbase=[r for r in base if source_key(r)==s]
         add(f'{s}:base_method_count',len(smbase)==4,len(smbase))
         for arm in ARM_ORDER:
-            for method in METHOD_ORDER:
+            for method in method_order:
                 g=[r for r in group if r['arm']==arm and r['method']==method]
                 reps={int(float(r['rep'])) for r in g}
                 add(f'{s}:{arm}:{method}:B',len(g)==expected_b and reps==set(range(1,expected_b+1)),len(g))
         for seed_field in ['init_seed','fit_seed']:
             vals={r.get(seed_field) for r in group+smbase}
             add(f'{s}:{seed_field}:fixed',len(vals)==1 and all(present(v) for v in vals),sorted(str(v) for v in vals))
-        for method in METHOD_ORDER:
+        for method in method_order:
             g=[r for r in group+smbase if r['method']==method]
             vals={r.get('fit_rng_hash') for r in g if present(r.get('fit_rng_hash'))}
             add(f'{s}:{method}:fit_rng_fixed',len(vals)==1 and all(present(r.get('fit_rng_hash')) for r in g),sorted(vals))
@@ -237,7 +236,7 @@ def audit_design(root, rows, base, manifest, sources, expected_b):
                 ar=[r for r in sub if r['arm']==arm]
                 xh={r.get('attribute_hash') for r in ar}
                 add(f'{s}:b{b}:{arm}:shared_X',len(ar)==4 and len(xh)==1 and all(present(x) for x in xh),sorted(str(v) for v in xh))
-                pp=[r for r in ar if r['method'] in ['Proposed','Pure_aSBM_C']]
+                pp=[r for r in ar if r['method'] in method_order[:2]]
                 ih={r.get('initial_hash') for r in pp}
                 add(f'{s}:b{b}:{arm}:shared_model_initialization',len(pp)==2 and len(ih)==1 and all(present(v) for v in ih),sorted(str(v) for v in ih))
             mf=mm.get((s,b))
@@ -252,12 +251,12 @@ def audit_design(root, rows, base, manifest, sources, expected_b):
     return checks
 
 
-def summaries(rows, sources, expected_b, models):
+def summaries(rows, sources, expected_b, models, method_order):
     result=[]; kdist=[]
     anchor_ks={source_key(r):num(r.get('K')) for r in models}
     for s in sources:
         for arm in ARM_ORDER:
-            for method in METHOD_ORDER:
+            for method in method_order:
                 group=[r for r in rows if source_key(r)==s and r['arm']==arm and r['method']==method]
                 if not group: continue
                 errors=sum(error_row(r) for r in group); caps=sum(cap_row(r) for r in group)
@@ -277,10 +276,10 @@ def summaries(rows, sources, expected_b, models):
     return result,kdist
 
 
-def paired_summaries(rows,sources,expected_b):
+def paired_summaries(rows,sources,expected_b,method_order):
     lookup={row_key(r):r for r in rows};pairs=[];sums=[]
     for s in sources:
-        for method in METHOD_ORDER:
+        for method in method_order:
             for metric in METRICS:
                 diffs=[]
                 for b in range(1,expected_b+1):
@@ -295,10 +294,10 @@ def paired_summaries(rows,sources,expected_b):
     return pairs,sums
 
 
-def overall_counts(rows,base,expected_sources,expected_b):
+def overall_counts(rows,base,expected_sources,expected_b,method_order):
     totals=[];events=[]
     for phase,data,planned in [('base',base,expected_sources),('bootstrap',rows,expected_sources*expected_b*2)]:
-        for method in METHOD_ORDER:
+        for method in method_order:
             g=[r for r in data if r['method']==method]
             totals.append(dict(phase=phase,method=method,planned=planned,completed_records=len(g),
                 errors=sum(error_row(r) for r in g),caps=sum(cap_row(r) for r in g),
@@ -372,15 +371,18 @@ def main():
     sources = list(dict.fromkeys(source_key(r) for r in base))
     if len(sources) != cfg.expected_sources or len(rows) != cfg.expected_sources * cfg.expected_b * 8:
         raise RuntimeError("Unexpected record count. Check expected sources and B.")
-    checks = audit_design(root, rows, base, manifest, sources, cfg.expected_b)
+    # Preserve the method identifier and partition filenames in earlier output directories.
+    pure_method = "Pure_aSBM_C" if any(r["method"] == "Pure_aSBM_C" for r in base) else "Pure_aSBM"
+    method_order = ["Proposed", pure_method, "Louvain", "KMeans_estK"]
+    checks = audit_design(root, rows, base, manifest, sources, cfg.expected_b, method_order)
     write_csv(out / "analysis_design_audit.csv", checks)
     _, failures, partition_cache = audit_partitions(root, rows, base, out)
     if failures or not all(c["passed"] for c in checks):
         write_csv(out / "analysis_audit_failures.csv", failures, fields=["kind", "key", "detail"])
         raise RuntimeError("Bootstrap design or partition validation failed")
-    group_summary, k_distribution = summaries(rows, sources, cfg.expected_b, models)
-    differences, paired = paired_summaries(rows, sources, cfg.expected_b)
-    totals, warnings = overall_counts(rows, base, cfg.expected_sources, cfg.expected_b)
+    group_summary, k_distribution = summaries(rows, sources, cfg.expected_b, models, method_order)
+    differences, paired = paired_summaries(rows, sources, cfg.expected_b, method_order)
+    totals, warnings = overall_counts(rows, base, cfg.expected_sources, cfg.expected_b, method_order)
     write_csv(out / "analysis_group_summary.csv", group_summary)
     write_csv(out / "analysis_K_distribution.csv", k_distribution)
     write_csv(out / "analysis_paired_arm_differences.csv", differences)

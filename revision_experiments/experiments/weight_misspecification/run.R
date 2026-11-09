@@ -4,11 +4,8 @@ script <- normalizePath(sub("^--file=", "", commandArgs(FALSE)[startsWith(comman
 wd <- dirname(script); root <- normalizePath(file.path(wd, "../..")); code <- file.path(root, "code")
 source(file.path(code, "weighted_model.R"))
 source(file.path(wd, "design_helpers.R"))
-native <- file.path(code, paste0("pure_asbm_floor_correction", .Platform$dynlib.ext))
-if (!file.exists(native)) stop("Compile the aSBM baseline with R CMD SHLIB code/pure_asbm_floor_correction.c")
-if (!is.loaded("pure_asbm_floor_correction_c")) dyn.load(native)
 source(file.path(code, "pure_asbm_vectorized.R"))
-stopifnot(is.loaded("pure_asbm_floor_correction_c"), formals(stats::kmeans)$iter.max == 10L)
+stopifnot(formals(stats::kmeans)$iter.max == 10L)
 betas <- c(0, 0.25, 0.5, 1, 2, 4)
 models <- setNames(lapply(betas, function(b) make_model(code, b)), as.character(betas))
 baseline <- make_model(code)
@@ -17,12 +14,16 @@ out <- Sys.getenv("WM_OUTPUT", file.path(root, "outputs/weight_misspecification"
 workers <- as.integer(Sys.getenv("WM_WORKERS", "4")); reps <- if (smoke) 1L else 10L
 dir.create(file.path(out, "runs"), recursive=TRUE, showWarnings=FALSE)
 dir.create(file.path(out, "data_cache"), recursive=TRUE, showWarnings=FALSE)
-files <- c(script, file.path(wd, c("design_helpers.R", "protocol.md")), native,
+files <- c(script, file.path(wd, c("design_helpers.R", "protocol.md")),
            file.path(code, c("weighted_model.R", "asbmlou.R", "asbmlou_revised_stop.R",
-                             "pure_asbm_vectorized.R", "pure_asbm_floor_correction.c")))
+                             "pure_asbm_vectorized.R")))
 manifest <- tools::md5sum(files); manifest_hash <- hash_object(manifest)
 manifest_file <- file.path(out, "manifest.rds")
-if (file.exists(manifest_file)) stopifnot(identical(readRDS(manifest_file), manifest)) else saveRDS(manifest, manifest_file)
+if (file.exists(manifest_file)) {
+  if (!identical(readRDS(manifest_file), manifest)) {
+    stop("Use a new WM_OUTPUT directory for the current implementation.")
+  }
+} else saveRDS(manifest, manifest_file)
 write.csv(data.frame(path=names(manifest), md5=unname(manifest)), file.path(out, "manifest.csv"), row.names=FALSE)
 saveRDS(list(smoke=smoke, reps=reps, workers=workers, rng=RNGkind(),
              session=capture.output(sessionInfo()), manifest_hash=manifest_hash), file.path(out,"settings.rds"))

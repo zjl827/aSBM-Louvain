@@ -10,10 +10,6 @@ vars<-c('OMP_NUM_THREADS','OPENBLAS_NUM_THREADS','VECLIB_MAXIMUM_THREADS','BLAS_
 stopifnot(all(Sys.getenv(vars)=='1'),identical(as.integer(formals(stats::kmeans)$iter.max),10L))
 source(file.path(code,'asbmlou.R'));source(file.path(code,'asbmlou_revised_stop.R'))
 source(file.path(code,'pure_asbm_vectorized.R'))
-if (is.loaded('pure_asbm_floor_correction_c')) {
- dyn.unload(getNativeSymbolInfo('pure_asbm_floor_correction_c')$dll[['path']])
-}
-stopifnot(!is.loaded('pure_asbm_floor_correction_c'))
 source(file.path(work,'generate.R'))
 tasks_path<-file.path(work,'tasks.csv')
 tasks<-read.csv(tasks_path,stringsAsFactors=FALSE)
@@ -34,7 +30,11 @@ metadata<-list(stage=stage,start_time=as.character(Sys.time()),run_hash=run_hash
               tasks_hash=tasks_hash,input_hashes=input_hashes,threads=Sys.getenv(vars),RNGkind=RNGkind(),
               session=capture.output(sessionInfo()),external=extSoftVersion())
 metadata_path<-file.path(out,'metadata.rds')
-if(file.exists(metadata_path))stopifnot(identical(readRDS(metadata_path)$run_hash,run_hash)) else {
+if(file.exists(metadata_path)) {
+ if(!identical(readRDS(metadata_path)$run_hash,run_hash)) {
+  stop('Saved timing checkpoints use different code or inputs. Set REVISION_TIMING_OUT to a fresh directory.')
+ }
+} else {
  saveRDS(metadata,metadata_path);capture.output(str(metadata),file=file.path(out,'metadata.txt'))
 }
 dir.create(file.path(out,'sessions'),showWarnings=FALSE)
@@ -47,7 +47,6 @@ methods<-c('Proposed','Pure_exact_R')
 # Original rotation restricted to the two formally reported methods.
 orders<-list(c(1L,2L),c(2L,1L),c(1L,2L),c(2L,1L),c(2L,1L),c(1L,2L))
 run_fit<-function(method,data,initial,rng,resolution){
- stopifnot(!is.loaded('pure_asbm_floor_correction_c'))
  backend<-if(method=='Proposed')'current_R_igraph' else 'exact_vectorized_R'
  assign('.Random.seed',rng,envir=.GlobalEnv);invisible(gc())
  started<-proc.time()

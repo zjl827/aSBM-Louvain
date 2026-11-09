@@ -1,22 +1,5 @@
 suppressPackageStartupMessages(library(igraph))
 
-pure_asbm_source_path <- tryCatch(
-  normalizePath(sys.frame(1L)$ofile, mustWork = TRUE),
-  error = function(condition) NA_character_
-)
-pure_asbm_native_path <- if (is.na(pure_asbm_source_path)) {
-  NA_character_
-} else {
-  file.path(dirname(pure_asbm_source_path), "pure_asbm_floor_correction.so")
-}
-if (
-  !is.na(pure_asbm_native_path) &&
-    file.exists(pure_asbm_native_path) &&
-    !is.loaded("pure_asbm_floor_correction_c")
-) {
-  dyn.load(pure_asbm_native_path)
-}
-
 pure_asbm_matched_kmeans_initialization <- function(
     network, attributes, resolution = 1.0, nstart = 5L) {
   graph_object <- igraph::graph_from_adjacency_matrix(
@@ -78,15 +61,6 @@ pure_asbm_floor_correction <- function(
   #                - left_i * right_j]
   # exactly up to floating-point summation order. Scanning i from right to
   # left, Fenwick trees store the count and sum of right_j values for j > i.
-  if (is.loaded("pure_asbm_floor_correction_c")) {
-    return(.Call(
-      "pure_asbm_floor_correction_c",
-      as.double(left_weights),
-      as.double(right_weights),
-      as.double(floor_value)
-    ))
-  }
-
   number_of_nodes <- length(left_weights)
   if (number_of_nodes < 2L) return(0)
 

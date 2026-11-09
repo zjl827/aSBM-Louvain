@@ -8,7 +8,7 @@ The undirected, loop-free SBM has 1,000 nodes, five communities of 200 nodes, an
 
 For each input, Louvain estimates $K$ at resolution 1. Attribute K-means uses that count (at least two), `nstart=5`, and `iter.max=10`. The K-means partition is the estimated-$K$ reference and initializes aSBM-Louvain and aSBM. Both fits start with the same post-initialization RNG state. The Louvain reference is the partition used to estimate $K$.
 
-aSBM-Louvain uses initial annealing strength 1, cooling factor 0.8, relative objective tolerance 0.001, absolute modularity tolerance 0.0001, and an unchanged community count for three successive updates. The outer-iteration budget is 1,000 and the per-fit soft time limit is 300 seconds. The aSBM baseline uses objective tolerance 1 and the compiled correction routine. Timings are diagnostic.
+aSBM-Louvain uses initial annealing strength 1, cooling factor 0.8, relative objective tolerance 0.001, absolute modularity tolerance 0.0001, and an unchanged community count for three successive updates. The outer-iteration budget is 1,000 and the per-fit soft time limit is 300 seconds. The vectorized R aSBM baseline uses objective tolerance 1. Timings are diagnostic.
 
 ## Likelihood weights
 

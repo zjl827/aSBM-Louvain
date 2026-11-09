@@ -14,14 +14,13 @@ install.packages(c("igraph", "Matrix", "mvtnorm", "mclust"))
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r requirements.txt
-(cd code && R CMD SHLIB pure_asbm_floor_correction.c)
 ```
-
-The last command builds the native denominator correction for the aSBM accuracy benchmark. It requires the C toolchain for your R installation. The matched runtime experiment uses the R-only implementation.
 
 ## Implementation
 
 `code/asbmlou.R` and `code/asbmlou_revised_stop.R` contain the aSBM-Louvain implementation used in the experiments. Source them in that order and call `aSBM_Louvain_revised()`. The standard configuration uses attribute K-means initialization with a Louvain estimate of the number of groups, prior feedback, and the joint stopping rule. Each runner sets the parameters specific to its experiment.
+
+The aSBM baseline in `code/pure_asbm_vectorized.R` preserves the per-pair denominator floor using the vectorized R implementation. For a fresh run, use an output directory without checkpoints from another version.
 
 ## Balanced simulations
 

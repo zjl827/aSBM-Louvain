@@ -26,7 +26,7 @@
   "base_method_records": 40,
   "methods": [
     "Proposed",
-    "Pure_aSBM_C",
+    "Pure_aSBM",
     "Louvain",
     "KMeans_estK"
   ],
@@ -45,7 +45,7 @@
     "prior_feedback": true
   },
   "pure": {
-    "backend": "validated exact vectorized implementation with C denominator-floor correction",
+    "backend": "vectorized R implementation retaining the per-pair denominator floor",
     "tolerance": 1,
     "max_iterations": 1000,
     "timeout_sec": 300

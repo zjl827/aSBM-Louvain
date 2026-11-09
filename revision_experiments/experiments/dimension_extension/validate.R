@@ -7,9 +7,6 @@ out <- Sys.getenv("DIM_OUTPUT", file.path(root, "outputs/dimension_extension"))
 oldout <- Sys.getenv("DIM_PILOT_OUTPUT", file.path(root, "outputs/dimension_pilot"))
 source(file.path(root, "experiments", "weight_misspecification", "design_helpers.R"))
 code <- file.path(root, "code")
-native <- file.path(code, paste0("pure_asbm_floor_correction", .Platform$dynlib.ext))
-if (!file.exists(native)) stop("Compile the aSBM baseline with R CMD SHLIB code/pure_asbm_floor_correction.c")
-if (!is.loaded("pure_asbm_floor_correction_c")) dyn.load(native)
 source(file.path(code, "pure_asbm_vectorized.R"))
 assertions<-0L
 check<-function(ok,label){if(!isTRUE(ok))stop(label);assertions<<-assertions+1L}
@@ -20,7 +17,7 @@ manifest<-readRDS(file.path(out,"manifest.rds"));prior_manifest<-readRDS(file.pa
 check(identical(tools::md5sum(names(manifest)),manifest),"Extension manifest changed")
 check(identical(tools::md5sum(names(prior_manifest)),prior_manifest),"Original manifest changed")
 common<-intersect(names(manifest),names(prior_manifest))
-check(length(common)==7&&identical(manifest[common],prior_manifest[common]),"Underlying model/helper code differs from pilot")
+check(length(common)==5&&identical(manifest[common],prior_manifest[common]),"Underlying model/helper code differs from pilot")
 check(identical(hash_object(manifest),settings$manifest_hash),"Manifest hash mismatch")
 check(!settings$smoke&&settings$reps==10&&settings$workers>=1,"Unexpected settings")
 RNGkind(settings$rng[1],settings$rng[2],settings$rng[3])
@@ -110,7 +107,7 @@ diagnostic<-do.call(rbind,diagnostic);rownames(diagnostic)<-NULL
 write.csv(diagnostic,file.path(out,"validation_pure_diagnostic.csv"),row.names=FALSE)
 dg<-do.call(rbind,lapply(split(diagnostic,list(diagnostic$D,diagnostic$sigma),drop=TRUE),function(a)data.frame(D=a$D[1],sigma=a$sigma[1],planned=nrow(a),returned=sum(a$status=="ok"),initial_nonfinite=sum(a$initial_nonfinite),runs_with_nonfinite_candidates=sum(a$candidate_nonfinite>0),returned_identical_to_kmeans=sum(a$returned_identical_to_kmeans,na.rm=TRUE))))
 report<-c("DIMENSION EXTENSION INDEPENDENT VALIDATION",sprintf("Passed assertions: %d",assertions),sprintf("Independently rescored predictions: %d / 160",rescored),sprintf("Maximum absolute ARI / NMI differences: %.3g / %.3g",ari_error,nmi_error),
-  "Original and extension manifests intact; the same seven model/helper/native files have identical hashes.",
+  "Original and extension manifests intact; all five shared model and helper files have identical hashes.",
   "Runner diff inspected: only dimensions/output provenance, larger residual matrix with exact prefix check, and transparent Pure objective logging changed; algorithm calls and fit parameters unchanged.",
   "All 40 attributes exactly reconstructed; D=200 old prefixes and D=400-to-800 prefixes agree exactly. A, mean, truth, seeds, and Louvain partition are identical to original repetition.",
   "All 10 theoretical pairwise distances unchanged across dimensions; added community means are exactly zero.",

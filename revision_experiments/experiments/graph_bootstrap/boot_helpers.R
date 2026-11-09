@@ -54,7 +54,7 @@ gb_fit_methods <- function(A,X,source) {
   init<-gb_initialization(A,X,source);attempts<-list()
   set.seed(source$fit_seed);fit_rng<-.Random.seed
   initial<-init$kmeans_partition
-  for(method in c('Proposed','Pure_aSBM_C','Louvain','KMeans_estK')) {
+  for(method in c('Proposed','Pure_aSBM','Louvain','KMeans_estK')) {
     assign('.Random.seed',fit_rng,envir=.GlobalEnv)
     if(method=='Louvain') {
       a<-init$louvain
@@ -87,14 +87,14 @@ gb_record_metrics <- function(fits,A,X,source,arm,rep,anchor,own_partitions,trut
     row<-data.frame(source_id=source$case_id,kind=source$kind,dataset=source$dataset,arm=arm,rep=rep,method=method,
       init_seed=source$init_seed,fit_seed=source$fit_seed,N=nrow(X),D=ncol(X),resolution=source$resolution,
       source_model_hash=model_hash,graph_hash=graph_hash,attribute_hash=attribute_hash,
-      initial_hash=gb_hash(initial),fit_rng_hash=rng_hash,fit_rng_applied=method%in%c('Proposed','Pure_aSBM_C'),
+      initial_hash=gb_hash(initial),fit_rng_hash=rng_hash,fit_rng_applied=method%in%c('Proposed','Pure_aSBM'),
       representation=if(inherits(A,'sparseMatrix'))'sparse' else 'dense',edge_count=sum(A)/2,
       initial_K=if(is.null(initial))NA_integer_ else length(unique(initial)),
       initial_ARI_anchor=if(is.null(initial))NA_real_ else mclust::adjustedRandIndex(anchor,initial),
       ARI_anchor=NA_real_,ARI_own_source=NA_real_,ARI_original_truth=NA_real_,NMI_anchor=NA_real_,
       final_K=NA_integer_,iterations=NA_integer_,stop_reason=if(failed)'error' else fit$stop_reason,
       status=if(failed)'error' else 'ok',error=if(failed)fit$message else '',
-      init_warnings=initial_warning,fit_warnings=if(method%in%c('Proposed','Pure_aSBM_C'))attempt$warnings else '',
+      init_warnings=initial_warning,fit_warnings=if(method%in%c('Proposed','Pure_aSBM'))attempt$warnings else '',
       diagnostic_sec=attempt$elapsed,within_anchor_pair_retention=NA_real_,between_anchor_pair_merge=NA_real_,
       stringsAsFactors=FALSE)
     if(!failed) {
