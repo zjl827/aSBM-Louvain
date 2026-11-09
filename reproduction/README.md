@@ -64,7 +64,6 @@ python3 experiments/weight_misspecification/analyze.py
 
 # The dimension extension uses the pilot inputs and results.
 Rscript experiments/dimension_pilot/run.R
-Rscript experiments/dimension_pilot/validate.R
 Rscript experiments/dimension_pilot/analyze.R
 Rscript experiments/dimension_extension/run.R
 Rscript experiments/dimension_extension/analyze.R

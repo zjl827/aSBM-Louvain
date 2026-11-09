@@ -3,12 +3,6 @@ script<-normalizePath(sub("^--file=","",commandArgs(FALSE)[startsWith(commandArg
 root<-normalizePath(file.path(dirname(script),"../.."));out <- Sys.getenv("DIM_PILOT_OUTPUT", file.path(root, "outputs/dimension_pilot"))
 x<-read.csv(file.path(out,"raw_metrics.csv"),stringsAsFactors=FALSE)
 stopifnot(nrow(x)==240,!anyDuplicated(paste(x$condition_id,x$rep,x$method)))
-diagnostic<-read.csv(file.path(out,"pure_objective_diagnostic.csv"),stringsAsFactors=FALSE)
-idx<-match(paste(x$condition_id,x$rep),paste(diagnostic$condition_id,diagnostic$rep))
-x$pure_initial_objective_finite<-ifelse(x$method=="Pure_aSBM",diagnostic$initial_objective_finite[idx],NA)
-x$pure_candidate_nonfinite<-ifelse(x$method=="Pure_aSBM",diagnostic$candidate_nonfinite[idx],NA)
-x$pure_identical_to_kmeans<-ifelse(x$method=="Pure_aSBM",diagnostic$identical_to_kmeans[idx],NA)
-write.csv(x,file.path(out,"metrics_with_diagnostics.csv"),row.names=FALSE)
 method_order<-c("Proposed","Pure_aSBM","Louvain","KMeans_estK")
 keys<-unique(x[,c("condition_id","D","sigma","method")]);keys<-keys[order(keys$sigma,keys$D,match(keys$method,method_order)),]
 summary<-do.call(rbind,lapply(seq_len(nrow(keys)),function(i){
@@ -16,8 +10,6 @@ summary<-do.call(rbind,lapply(seq_len(nrow(keys)),function(i){
   a$n_planned<-nrow(b);a$n_returned<-sum(b$status=="ok");a$n_error<-sum(b$status!="ok")
   a$n_stopping_rule<-sum(b$met_stopping_rule,na.rm=TRUE);a$n_init_warning<-sum(b$init_warning_count>0)
   a$n_fit_warning<-sum(b$warning_count>0);a$n_stored_objective_nonfinite<-sum(!b$objective_finite,na.rm=TRUE)
-  a$n_pure_initial_nonfinite<-if(a$method=="Pure_aSBM")sum(!b$pure_initial_objective_finite,na.rm=TRUE)else NA_integer_
-  a$n_pure_candidate_nonfinite<-if(a$method=="Pure_aSBM")sum(b$pure_candidate_nonfinite>0,na.rm=TRUE)else NA_integer_
   for(metric in c("ARI","NMI")) {
     v<-b[[metric]][is.finite(b[[metric]])];a[[paste0(metric,"_n")]]<-length(v)
     a[[paste0(metric,"_mean")]]<-if(length(v))mean(v)else NA_real_
@@ -52,8 +44,7 @@ for(sig in c(1.5,4))for(d in c(50,100,200))for(method in method_order[-1]) {
   comparison[[j]]<-cbind(data.frame(sigma=sig,D=d,baseline=method),pair_stats(p$ARI_proposed-p$ARI_baseline))
 }
 write.csv(do.call(rbind,comparison),file.path(out,"paired_method_ARI.csv"),row.names=FALSE)
-numerical_issue<-(!is.na(x$pure_initial_objective_finite)&!x$pure_initial_objective_finite)|(!is.na(x$pure_candidate_nonfinite)&x$pure_candidate_nonfinite>0)
-write.csv(x[x$status!="ok"|x$init_warning_count>0|x$warning_count>0|x$stop_reason %in% c("safety_cap","iteration_cap","timeout")|(!is.na(x$objective_finite)&!x$objective_finite)|numerical_issue,],file.path(out,"exception_records.csv"),row.names=FALSE)
+write.csv(x[x$status!="ok"|x$init_warning_count>0|x$warning_count>0|x$stop_reason %in% c("safety_cap","iteration_cap","timeout")|(!is.na(x$objective_finite)&!x$objective_finite),],file.path(out,"exception_records.csv"),row.names=FALSE)
 
 colors<-c("#126E82","#C75631","#636363","#7656A3");pch_values<-c(16,17,15,18)
 draw<-function(){
@@ -75,9 +66,9 @@ draw<-function(){
   par(mar=c(0,0,0,0));plot.new()
   legend("top",legend=c("Proposed","Pure aSBM","Louvain","K-means (estimated K)"),col=colors,pch=pch_values,lty=c(1,1,2,1),lwd=2,bty="n",cex=.95,horiz=TRUE)
   text(.5,.36,"Mean +/- sample SD; 10 independent data repetitions per setting; n = 1000, K = 5, r = 4",cex=.8)
-  text(.5,.08,"Pure aSBM at D = 200: all 19 returned partitions equal K-means; 1 error at noise SD = 4 (see report)",cex=.8)
+  text(.5,.08,"Fit warnings and failures are listed in exception_records.csv",cex=.8)
 }
 png(file.path(out,"dimension_ARI.png"),width=1600,height=850,res=150);draw();dev.off()
 pdf(file.path(out,"dimension_ARI.pdf"),width=10.67,height=5.67);draw();dev.off()
-print(summary[,c("D","sigma","method","ARI_mean","ARI_sd","NMI_mean","n_error","n_stopping_rule","n_init_warning","n_stored_objective_nonfinite","n_pure_initial_nonfinite","n_pure_candidate_nonfinite","final_K_mean","iterations_mean","n_rank_risk_init")],row.names=FALSE)
+print(summary[,c("D","sigma","method","ARI_mean","ARI_sd","NMI_mean","n_error","n_stopping_rule","n_init_warning","n_stored_objective_nonfinite","final_K_mean","iterations_mean","n_rank_risk_init")],row.names=FALSE)
 print(paired[paired$method=="Proposed",],row.names=FALSE)

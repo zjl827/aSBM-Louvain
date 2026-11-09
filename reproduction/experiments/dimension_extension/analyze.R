@@ -2,9 +2,14 @@
 script<-normalizePath(sub("^--file=","",commandArgs(FALSE)[startsWith(commandArgs(FALSE),"--file=")][1]))
 root<-normalizePath(file.path(dirname(script),"../.."));out <- Sys.getenv("DIM_OUTPUT", file.path(root, "outputs/dimension_extension"))
 pilot_out <- Sys.getenv("DIM_PILOT_OUTPUT", file.path(root, "outputs/dimension_pilot"))
-old<-read.csv(file.path(pilot_out,"metrics_with_diagnostics.csv"),stringsAsFactors=FALSE)
+old<-read.csv(file.path(pilot_out,"raw_metrics.csv"),stringsAsFactors=FALSE)
 new<-read.csv(file.path(out,"raw_metrics.csv"),stringsAsFactors=FALSE)
-stopifnot(nrow(old)==240,nrow(new)==160,setequal(names(old),names(new)))
+# Only the extension runner records these diagnostics during fitting.
+diagnostic_columns <- c("pure_initial_objective_finite", "pure_candidate_nonfinite", "pure_identical_to_kmeans")
+stopifnot(nrow(old)==240,nrow(new)==160,
+          all(diagnostic_columns %in% names(new)),
+          setequal(names(old),setdiff(names(new),diagnostic_columns)))
+for (column in diagnostic_columns) old[[column]] <- NA
 old$batch<-"initial";new$batch<-"extension"
 x<-rbind(old,new)
 stopifnot(nrow(x)==400,!anyDuplicated(paste(x$D,x$sigma,x$rep,x$method)))
@@ -16,8 +21,8 @@ summary<-do.call(rbind,lapply(seq_len(nrow(keys)),function(i){
   a$n_planned<-nrow(b);a$n_returned<-sum(b$status=="ok");a$n_error<-sum(b$status!="ok")
   a$n_stopping_rule<-sum(b$met_stopping_rule,na.rm=TRUE);a$n_init_warning<-sum(b$init_warning_count>0)
   a$n_fit_warning<-sum(b$warning_count>0);a$n_stored_objective_nonfinite<-sum(!b$objective_finite,na.rm=TRUE)
-  a$n_pure_initial_nonfinite<-if(a$method=="Pure_aSBM")sum(!b$pure_initial_objective_finite,na.rm=TRUE)else NA_integer_
-  a$n_pure_candidate_nonfinite<-if(a$method=="Pure_aSBM")sum(b$pure_candidate_nonfinite>0,na.rm=TRUE)else NA_integer_
+  a$n_pure_initial_nonfinite<-if(all(is.na(b$pure_initial_objective_finite)))NA_integer_ else sum(!b$pure_initial_objective_finite,na.rm=TRUE)
+  a$n_pure_candidate_nonfinite<-if(all(is.na(b$pure_candidate_nonfinite)))NA_integer_ else sum(b$pure_candidate_nonfinite>0,na.rm=TRUE)
   for(metric in c("ARI","NMI")) {
     v<-b[[metric]][is.finite(b[[metric]])];a[[paste0(metric,"_n")]]<-length(v)
     a[[paste0(metric,"_mean")]]<-if(length(v))mean(v)else NA_real_
@@ -75,7 +80,7 @@ draw<-function(){
   par(mar=c(0,0,0,0));plot.new()
   legend("top",legend=c("Proposed","Pure aSBM","Louvain","K-means (estimated K)"),col=colors,pch=pch_values,lty=c(1,1,2,1),lwd=2,bty="n",cex=.95,horiz=TRUE)
   text(.5,.36,"Mean +/- sample SD; 10 independent data repetitions per setting; n = 1000, K = 5, r = 4",cex=.8)
-  text(.5,.08,"Pure aSBM numerical issues and missing results are reported separately; see the complete report",cex=.8)
+  text(.5,.08,"Fit warnings and numerical issues are listed in exception_records.csv",cex=.8)
 }
 png(file.path(out,"dimension_ARI.png"),width=1600,height=850,res=150);draw();dev.off()
 pdf(file.path(out,"dimension_ARI.pdf"),width=10.67,height=5.67);draw();dev.off()
