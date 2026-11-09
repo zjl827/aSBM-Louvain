@@ -23,5 +23,5 @@ Run the commands in the experiment guide from `reproduction/`. The guide covers 
 
 - The balanced simulations cover scenarios A1–A3 and B1–B3, with scripts for generating data, running the methods, and plotting the results. [Balanced simulations](reproduction/README.md#balanced-simulations)
 - The supplementary experiments are indexed by section number. [Supplementary experiments](reproduction/README.md#supplementary-experiments)
-- The STARmap and MERFISH instructions show how to prepare the input data and run the accuracy and timing comparisons. [Real-data experiments](reproduction/experiments/realdata_current/README.md) · [Timing experiments](reproduction/experiments/timing_current/README.md)
-- The BACT and SpaGCN scripts use their own input and dependency setup. [Baseline scripts](realdata_experiments/) · [Baseline setup](https://github.com/zjl827/aSBM-Louvain/blob/bf6b721df90ad321efc8e1026d26ab27a6a60e57/README.md#real-data-experiments)
+- The STARmap and MERFISH workflow prepares the input data and runs aSBM-Louvain, vectorized Pure-aSBM, Louvain, and K-means. The timing study has its own instructions. [Real-data experiments](reproduction/experiments/realdata_current/README.md) · [Timing experiments](reproduction/experiments/timing_current/README.md)
+- The BACT and SpaGCN scripts use their own input and dependency setup. [Baseline scripts](realdata_experiments/) · [BACT and SpaGCN setup](https://github.com/zjl827/aSBM-Louvain/blob/bf6b721df90ad321efc8e1026d26ab27a6a60e57/README.md#real-data-experiments)
