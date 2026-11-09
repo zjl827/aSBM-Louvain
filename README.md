@@ -2,6 +2,10 @@
 
 Code to reproduce all experiments from the paper *"aSBM-Louvain: Attributed Network Clustering with Louvain-Based Block Structure Learning"*.
 
+## Revision Experiments
+
+The revised simulations and supplementary experiments are documented in [revision_experiments](revision_experiments/). The original scripts below reproduce the earlier experiment protocol.
+
 ## Overview
 
 This repository implements **aSBM-Louvain**, a method for clustering attributed networks that combines the attributed Stochastic Block Model (aSBM) with Louvain community detection. The Louvain step replaces the slow likelihood-based partition search of Pure-aSBM (Stanley et al., 2019), reducing per-run time from hours to under a second.

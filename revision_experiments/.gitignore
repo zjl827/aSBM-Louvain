@@ -1,0 +1,15 @@
+/.venv/
+/data/
+/inputs/
+/outputs/
+/results/
+/vendor/
+__pycache__/
+*.py[cod]
+*.o
+*.so
+*.dll
+*.dylib
+.Rhistory
+.RData
+.DS_Store

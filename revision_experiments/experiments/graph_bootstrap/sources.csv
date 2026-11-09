@@ -1,0 +1,11 @@
+case_id,kind,dataset,r,sigma,h,N,D,resolution,init_seed,fit_seed,B,representation
+W01,simulation,W01,1.5,1.5,1,1000,50,1,105100001,105200001,50,dense
+W02,simulation,W02,4,1.5,1,1000,50,1,105100002,105200002,50,dense
+W03,simulation,W03,1.5,4,1,1000,50,1,105100003,105200003,50,dense
+W04,simulation,W04,4,4,1,1000,50,1,105100004,105200004,50,dense
+W05,simulation,W05,1.5,1.5,3,1000,50,1,105100005,105200005,50,dense
+W06,simulation,W06,4,1.5,3,1000,50,1,105100006,105200006,50,dense
+W07,simulation,W07,1.5,4,3,1000,50,1,105100007,105200007,50,dense
+W08,simulation,W08,4,4,3,1000,50,1,105100008,105200008,50,dense
+STARmap,real,STARmap,,,,1207,2,1.5,105100009,105200009,50,sparse
+MERFISH,real,MERFISH,,,,5803,2,0.5,105100010,105200010,50,sparse

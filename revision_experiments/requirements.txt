@@ -1,0 +1,7 @@
+numpy
+pandas
+scipy
+matplotlib>=3.7
+networkx
+h5py
+scikit-learn

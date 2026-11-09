@@ -1,0 +1,99 @@
+{
+  "version": "conditional_graph_bootstrap_v1_20261005",
+  "frozen_date": "2026-10-05",
+  "purpose": "Conditional sensitivity of the current clustering procedure to fitted-model network resampling, separate from the completed fixed-input initialization study.",
+  "sources": {
+    "simulation": "W01-W08 Gaussian conditions, predetermined repetition 1; r in {1.5,4}, sigma in {1.5,4}, h in {1,3}. These are source-condition labels, not restrictions on the fitted bootstrap parameters.",
+    "real": "STARmap and MERFISH, expression-derived graph and spatial attributes; fixed archived inputs.",
+    "selection": "No selection by ARI. All eight Gaussian source conditions and both datasets included."
+  },
+  "base": "Refit all four methods on each observed input using its predetermined initialization and downstream seeds. The resulting current-Proposed hard partition is the bootstrap anchor; original truth/reference labels enter scoring only.",
+  "bootstrap_model": {
+    "labels": "Fixed source Proposed hard partition; fixed original node identities and community sizes. No resampling of memberships or community means.",
+    "edge_probability": "Raw observed block edge density among eligible distinct-node pairs. No 0.001 algorithmic clipping in the generator. Singleton-block diagonal probability is zero because there are no eligible pairs.",
+    "symmetry": "Independent Bernoulli for unordered distinct-node pairs, symmetric adjacency, zero diagonal. If sample_sbm is used, invert the community-order permutation before applying the graph to original node attributes.",
+    "attributes": "Community sample mean and MLE covariance (centered cross-product divided by community size) plus 1e-6 I. Each joint-bootstrap attribute row is independently Gaussian conditional on fixed anchor.",
+    "covariance_diagnostics": "Archive community sizes, unregularized covariance rank, minimum eigenvalues, trace(Sigma)/D, and regularization. Low-rank plug-in covariance can make joint-bootstrap stability optimistic.",
+    "edge_check": "Sum expected edge probabilities must equal the observed number of undirected edges, apart from floating-point tolerance."
+  },
+  "arms": {
+    "graph_only": "Regenerate A* and retain the exact original X.",
+    "joint": "Use the same A* as the paired graph_only replicate, and draw X* under the fitted community Gaussian distributions."
+  },
+  "replicates_per_source_per_arm": 50,
+  "bootstrap_instances": 1000,
+  "method_records": 4000,
+  "base_method_records": 40,
+  "methods": [
+    "Proposed",
+    "Pure_aSBM_C",
+    "Louvain",
+    "KMeans_estK"
+  ],
+  "initialization": {
+    "procedure": "Run Louvain on each current input graph (observed or resampled) to estimate K, then attribute K-means with nstart=5 and iter.max=10. Never warm-start from the bootstrap anchor.",
+    "comparison": "Proposed and Pure share the new K-means partition; standalone Louvain and KMeans_estK are those reference partitions.",
+    "randomness": "Source init_seed is held fixed across observed data and bootstrap replicates. Restore source fit_seed downstream state for every Proposed/Pure fit. This conditions on chosen algorithm random streams; different data-dependent paths may consume different draws."
+  },
+  "proposed": {
+    "T_outer": 1000,
+    "tau0": 1,
+    "rho_tau": 0.8,
+    "epsilon_L": 0.001,
+    "epsilon_Q": 0.0001,
+    "k_stable_required": 3,
+    "prior_feedback": true
+  },
+  "pure": {
+    "backend": "validated exact vectorized implementation with C denominator-floor correction",
+    "tolerance": 1,
+    "max_iterations": 1000,
+    "timeout_sec": 300
+  },
+  "execution": {
+    "workers": 2,
+    "threads_per_worker": 1,
+    "attempt_timeout_sec": 300,
+    "runtime": "diagnostic only; this is not a formal timing study"
+  },
+  "primary_statistics": [
+    "ARI against source Proposed anchor",
+    "ARI against each method original-data partition",
+    "Arithmetic-normalized NMI against anchor",
+    "K distribution and anchor-K reproducibility",
+    "Within-anchor coassignment retention and between-anchor false merge proportions",
+    "Errors, caps, normal stopping, initialization/fit warnings"
+  ],
+  "secondary_statistics": "Agreement with fixed original truth/reference annotations is contextual only. Under bootstrap, the generator labels are the fitted anchor, not these original annotations.",
+  "summaries": "Per fixed source, arm, method: planned/returned/error/cap counts, mean, sample SD/variance, median/IQR, empirical 5%-95% range, MCSE of the conditional bootstrap mean. With B=50, tail summaries and rare-event frequencies are coarse. Paired arm differences use the 50 shared-graph pairs, not 100 independent replicates.",
+  "interpretation_limits": [
+    "A model-based conditional stability diagnostic, not a proven confidence interval or concentration inequality for original-data ARI.",
+    "Stable reproduction of an erroneous source partition is not true-community accuracy; source ARI against original labels is always displayed.",
+    "All methods operate under a generator fitted around Proposed; this is not an independent universal superiority benchmark.",
+    "Fixed algorithm random seeds separate this study from random-initialization variation; do not call it total uncertainty or a complete variance decomposition.",
+    "Joint resampling assumes estimated Gaussian attributes. Source h=3 is not a guarantee that fitted covariance scales retain that ratio.",
+    "Real graphs arise from 6NN construction. Bernoulli SBM resampling does not reproduce kNN-construction dependence or the original biological sampling process.",
+    "Keep all errors and cap-reaching runs. Valid cap partitions remain in descriptive score summaries, with stopping rates separately disclosed.",
+    "This B=50 resampling study is distinct from the cancelled 30-new-seed extension of prior experiments."
+  ],
+  "references": [
+    {
+      "authors": "Levin and Levina",
+      "title": "Bootstrapping Networks with Latent Space Structure",
+      "url": "https://arxiv.org/abs/1907.10821",
+      "use": "Model-based whole-network resampling and limitations of transferring validity to arbitrary statistics; not an ARI theorem for this procedure."
+    },
+    {
+      "authors": "Green and Shalizi",
+      "title": "Bootstrapping Exchangeable Random Graphs",
+      "url": "https://arxiv.org/abs/1711.00813",
+      "use": "Estimated-network-model bootstrap as methodological context; motif-density guarantees do not establish clustering/ARI coverage here."
+    },
+    {
+      "authors": "Snijders and Borgatti",
+      "title": "Non-Parametric Standard Errors and Tests for Network Statistics",
+      "url": "https://assets.noviams.com/novi-file-uploads/insna/Connections_Archive/1999__Volume_22__Issue_2-ea0d25bc.pdf",
+      "use": "Why ordinary case resampling needs special handling for graph node duplication and exchangeability."
+    }
+  ]
+}
