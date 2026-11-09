@@ -3,7 +3,7 @@
 Install the [experiment dependencies](../../README.md#setup). The repository root contains `starmap_PCA_scores_50PCs.csv` and `coord_and_pc_19.RData`. Put these additional files in `reproduction/data/realdata` or pass `--input-dir` when running `prepare.R`.
 
 - [STARmap H5AD](http://sdmbench.drai.cn/tcm/download/?file_path=/mnt/JINGD/data/file/sdmbench/db/STARmap_20180505_BY3_1k.h5ad), saved as `STARmap_20180505_BY3_1k.h5ad`.
-- [STARmap cell-type annotations](https://drive.google.com/drive/folders/1I1nxheWlc2RXSdiv24dex3YRaEh78Omy?usp=sharing), saved as `Annotation_STARmap_20180505_BY3_1k.txt`.
+- [STARmap cell-type annotations](https://drive.google.com/drive/folders/1I1nxheWlc2RXSdiv24dex3YRaEh780my?usp=sharing), saved as `Annotation_STARmap_20180505_BY3_1k.txt`.
 - [MERFISH H5AD](http://sdmbench.drai.cn/tcm/download/?file_path=/mnt/JINGD/data/file/sdmbench/db/MERFISH_0.19.h5ad), saved as `MERFISH_0.19.h5ad`. The reference labels use its `cell_class` field.
 
 Run from `reproduction/`.
