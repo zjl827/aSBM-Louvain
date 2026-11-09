@@ -1,10 +1,10 @@
-# aSBM-Louvain revision experiments
+# aSBM-Louvain experiment guide
 
-This directory contains the scripts for the revised balanced simulations and the additional experiments in the Supplementary Material. Run the commands below from this directory.
+This directory contains the scripts for the balanced simulations and the experiments in the Supplementary Material. Run the commands below from this directory.
 
 ## Setup
 
-The archived experiments used R 4.5.2 with igraph 2.2.2, Matrix 1.7-4, mvtnorm 1.3-5, and mclust 6.1.2. Matching R and igraph versions matters because several designs use seeded Louvain partitions. Install the R dependencies and the Python packages used by the analysis scripts.
+The experiments used R 4.5.2 with igraph 2.2.2, Matrix 1.7-4, mvtnorm 1.3-5, and mclust 6.1.2. Matching R and igraph versions matters because several designs use seeded Louvain partitions. Install the R dependencies and the Python packages used by the analysis scripts.
 
 ```r
 install.packages(c("igraph", "Matrix", "mvtnorm", "mclust"))
@@ -19,9 +19,9 @@ python3 -m pip install -r requirements.txt
 
 The last command builds the native denominator correction for the aSBM accuracy benchmark. It requires the C toolchain for your R installation. The matched runtime experiment uses the R-only implementation.
 
-## Method version
+## Implementation
 
-`code/asbmlou.R` and `code/asbmlou_revised_stop.R` contain the frozen revision implementation. Source them in that order and call `aSBM_Louvain_revised()`. The standard configuration uses attribute K-means initialization with a Louvain estimate of the number of groups, prior feedback, and the joint stopping rule. Each runner sets the parameters specific to its experiment. The original repository entry points are preserved for the original experiment protocol.
+`code/asbmlou.R` and `code/asbmlou_revised_stop.R` contain the aSBM-Louvain implementation used in the experiments. Source them in that order and call `aSBM_Louvain_revised()`. The standard configuration uses attribute K-means initialization with a Louvain estimate of the number of groups, prior feedback, and the joint stopping rule. Each runner sets the parameters specific to its experiment.
 
 ## Balanced simulations
 
@@ -77,7 +77,7 @@ python3 experiments/initialization_stability/analyze.py
 
 For a quick run, use a separate output directory and set `PILOT_SMOKE=1`, `WM_SMOKE=1`, `DIM_SMOKE=1`, or `INIT_STAGE=smoke` for the corresponding runner. The full-design analysis scripts expect all replicates. Where an R runner uses forked workers, set its worker count to one on Windows.
 
-The [synthetic I-Louvain probe](experiments/ilouvain_synthetic/) and [finite potential diagnostics](experiments/potential_diagnostics/) reproduce additional checks from the revision response.
+The [synthetic I-Louvain probe](experiments/ilouvain_synthetic/) and [finite potential diagnostics](experiments/potential_diagnostics/) reproduce additional checks of clustering and potential trajectories.
 
 ## Data and outputs
 
