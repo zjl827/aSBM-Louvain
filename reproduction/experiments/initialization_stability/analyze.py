@@ -1,6 +1,6 @@
 """Analyze the nested fixed-data experiment without refitting any model."""
 from pathlib import Path
-import os, json, math, html
+import os, json
 ROOT=Path(__file__).resolve().parents[2]
 OUT=Path(os.environ.get('INIT_OUTPUT', ROOT/'outputs/initialization_stability'))
 import numpy as np
@@ -104,52 +104,9 @@ fig.suptitle('Within-data initialization variability, conditional on one downstr
 fig.text(.5,.012,'Each mean and SD uses 10 starts on exactly the same graph and attributes; the 3 datasets are independently generated.',ha='center',fontsize=9)
 fig.tight_layout(rect=[0,.035,1,.95]);fig.savefig(OUT/'within_dataset_variability.png');fig.savefig(OUT/'within_dataset_variability.pdf');plt.close(fig)
 
-short=cs[['condition','init_method','r','sigma','initial_ARI_grand_mean','ARI_grand_mean','ARI_rms_within_dataset_sd','ARI_between_dataset_means_sd','ARI_all_min','ARI_all_max','initialization_warnings','caps']].copy()
-short.columns=['Condition','Initialization','r','sigma','Initial ARI mean','Final ARI mean','RMS within-data SD','SD of 3 data means','Minimum final ARI','Maximum final ARI','Init warnings','Caps']
-short=short.round(4)
-details=ds[['condition','dataset','init_method','initial_ARI_mean','ARI_mean','ARI_sd','ARI_min','ARI_max','initial_K_mean','final_K_mean','initialization_warnings','caps']].round(4)
 counts=dict(planned_fits=264,main_fits=240,downstream_checks=24,independent_datasets=12,
  errors=int(raw.status.ne('ok').sum()),caps=int(raw.stop_reason.eq('safety_cap').sum()),
  init_warning_rows=int(nonempty(raw.init_warnings).sum()),fit_warning_rows=int(nonempty(raw.warnings).sum()),
  main_init_warning_rows=int(main.init_warning.sum()),max_iterations=int(raw.iterations.max()))
-summary_lines=[
- 'INITIALIZATION STUDY — CURRENT IMPLEMENTATION',
- 'Completed planned experiment: 4 conditions x 3 independently generated datasets x 10 initializations x 2 initializer methods = 240 main fits; 24 preset downstream RNG checks.',
- 'K-means: nstart=5, iter.max=10 unchanged; subsequent algorithm: tau0=1, rho=.8, resolution=1, joint thresholds 1e-3/1e-4, stable K for 3 updates, cap 1000.',
- 'The two initializers share the same preliminary Louvain result; it supplies graph labels and K. K-means then supplies attribute labels at max(2,K).',
- 'A fixed downstream RNG state is restored for all starts on each dataset. This controls the random source stream but does not force identical random moves after algorithm paths diverge.',
- json.dumps(counts,ensure_ascii=False),
- 'Ten distinct K-means initializations produced warnings. One of these initializations is reused in a downstream diagnostic, giving 11 warning-bearing fit rows in total; it is not an eleventh independent initialization warning.',
- '',short.to_string(index=False),
- '', 'FINDINGS',
- 'Weak graph signal (r=1.5): both initialization strategies fail to recover the planted communities in the tested inputs. For sigma=1.5, informative K-means starts have average ARI 0.7121 but finish at 0.0293; all 30 such starts decline. This rules out an uninformative starting partition as the sole explanation in these inputs, but does not identify one particular outer-loop update as the cause.',
- 'Stronger graph signal (r=4): K-means starts have higher average final ARI and lower within-data variation than graph Louvain starts in these 3 datasets per noise condition. At sigma=1.5, all 10 main initialization seeds give the same final ARI within each fixed dataset; this is conditional on the selected downstream RNG and is not a universal invariance claim.',
- 'The alternate downstream-RNG check produces nonzero changes in some pairs (largest absolute ARI change about 0.0254). Initialization is therefore not the only possible source of algorithmic variability.',
- 'There is no independent claim of statistical recovery, global convergence, or uniform robustness. Only 3 independently generated datasets are used per condition, and no significance conclusion is based on treating their 30 fits as iid data replicates.',
- '', 'Within-data SD describes changing initialization while data and downstream RNG are held fixed. SD across three dataset means is descriptive and not a population variance-component estimate.',
- 'Thirty fits per condition/method are nested in three independent datasets; do not treat all thirty as independent data replications. No statistical-significance claims are made.',
- '', 'K-means minus Louvain initialization, averaged within each dataset then across the three datasets:',pair_cs.round(4).to_string(index=False),
- '', 'Preset second downstream RNG (only init_id=1, three datasets per condition/method):',check_cs.round(4).to_string(index=False),
- 'This small downstream diagnostic does not provide a complete initialization-versus-Louvain variance decomposition.',
- '', 'All dataset details:',details.to_string(index=False),
- '', 'All failures, initialization warnings and cap terminations are retained. Fit elapsed times are diagnostics, not a formal runtime comparison.',
- 'The protocol records the model source and RNG/input hashes. Raw RDS files contain the saved partitions and trajectories.'
-]
-text='\n'.join(summary_lines)+'\n';(OUT/'report.txt').write_text(text)
-web='''<!doctype html><html lang="en"><meta charset="utf-8"><title>Initialization stability: current aSBM-Louvain</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:1180px;margin:35px auto;padding:0 25px;color:#182c3b}h1,h2{line-height:1.2}table{border-collapse:collapse;font-size:12px;width:100%;margin:20px 0}th,td{padding:8px 7px;border-bottom:1px solid #ccd8df;text-align:right}th{background:#edf3f7}img{width:100%;height:auto}.note{padding:15px;background:#eff5f8;border-left:4px solid #17699b}pre{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace}a{color:#17699b}</style><body>'''
-web+='<h1>Initialization stability of current aSBM-Louvain</h1>'
-web+='<p>Four conditions; 12 independent fixed datasets; 240 main fits and 24 preset downstream-RNG checks. All fits use the unchanged current corrected algorithm.</p>'
-web+='<p><b>Findings:</b> weak-network failure persists under both starting methods, including informative attribute-based starts. For r=4, K-means initialization gives higher average final ARI and lower within-data variability in these datasets. The alternate downstream-RNG diagnostic changes some results, so initialization is not the only source of algorithmic variation.</p>'
-web+='<div class="note"><b>Experimental units:</b> each condition has 3 independent datasets and 10 initialization seeds per dataset. The 30 fits per method/condition are not 30 independent generated datasets. K-means remains nstart=5, iter.max=10.</div>'
-web+='<h2>Condition summaries</h2>'+short.to_html(index=False,border=0)
-web+='<p>RMS within-data SD measures sensitivity to initialization conditional on fixed inputs and a fixed downstream RNG stream. The SD of 3 dataset means is a descriptive between-dataset summary, not a fully estimated variance component.</p>'
-web+='<img src="initial_to_final.png" alt="Initial and final ARI for every main fit"><img src="within_dataset_variability.png" alt="Conditional initialization variation for all 12 fixed datasets">'
-web+='<h2>Paired initialization comparison</h2>'+pair_cs.round(4).to_html(index=False,border=0)
-web+='<h2>Downstream RNG diagnostic</h2>'+check_cs.round(4).to_html(index=False,border=0)
-web+='<p>Only init_id=1 receives an alternate downstream stream. The same saved initial labels are reused. This is a limited diagnostic, not a complete random-effects decomposition.</p>'
-web+='<h2>All fixed datasets</h2>'+details.to_html(index=False,border=0)
-web+='<h2>Protocol and audit</h2><pre>'+html.escape(text)+'</pre>'
-web+='<p><a href="protocol.json">Frozen protocol</a> · <a href="raw_metrics.csv">All attempts</a> · <a href="dataset_summary.csv">Dataset summaries</a> · <a href="downstream_rng_comparison.csv">RNG pairs</a> · <a href="validation.txt">Validation</a></p></body></html>'
-(OUT/'report.html').write_text(web)
 (OUT/'analysis_audit.json').write_text(json.dumps(dict(counts=counts,metric_check='R runner independently recalculates ARI from contingencies and compares NMI with igraph; Python checks planned design and matching hashes.',all_planned_keys=True,main_rng_match=True,diagnostic_inputs_match=True),indent=2)+'\n')
-print(text[:11000])
+print(f"Wrote S6 summaries and figures to {OUT}")

@@ -330,51 +330,6 @@ def plots(summary, differences, out):
     save_fig(fig,out,"joint_ari_curves")
 
 
-def findings(summary, differences, report, out):
-    lines = [
-        "# Joint signal strength and community-dependent noise",
-        "",
-        f"The design uses {report['repetitions_per_condition']} independent data replicates per condition. Conditions sharing draws are paired within a replicate.",
-        "",
-        f"- {report['expected_conditions']} conditions and {report['observed_unique_instances']} of {report['expected_instances']} expected condition-replicate pairs.",
-        f"- {report['observed_method_rows']} of {report['expected_method_rows']} expected method records, with {report['missing_method_rows']} missing, {report['failed_method_rows']} failed, and {report['duplicate_rows']} duplicate records.",
-        f"- {report['initialization_warning_instances']} condition-replicate pairs issued a K-means warning. The same initial partition is used by aSBM-Louvain and aSBM. See [initialization warning records](initialization_warning_records.csv).",
-        "- The summary reports the mean, sample SD, and Monte Carlo standard error over replicate indices. Method differences use paired replicates and pointwise Student-t intervals.",
-        "- Community precision, recall, and F1 are computed after one-to-one label matching. The high- and low-noise summaries first average across true communities within each noise group. The worst-community summary first takes the minimum within each replicate. Group names at h=1 retain the fixed community designations.",
-    ]
-    if not report["issues"]:
-        def val(condition, method, column="ARI_mean"):
-            selected = summary.loc[(summary.condition_id == condition) & (summary.method == method), column]
-            return float(selected.iloc[0]) if len(selected) else np.nan
-
-        lines += [
-            "",
-            "## Selected results",
-            "",
-            f"- At r=1.5, mean aSBM-Louvain ARI is {val('C01','Proposed'):.3f}, {val('C02','Proposed'):.3f}, and {val('C06','Proposed'):.3f} at noise SD 1.5, 3, and 5. The corresponding aSBM means are {val('C01','Pure-aSBM'):.3f}, {val('C02','Pure-aSBM'):.3f}, and {val('C06','Pure-aSBM'):.3f}.",
-            f"- At r=3, mean aSBM-Louvain ARI is {val('C07','Proposed'):.3f}, {val('C08','Proposed'):.3f}, and {val('C09','Proposed'):.3f} as noise SD increases from 1.5 to 3 and 5.",
-            f"- At r=4 and noise SD 5, mean ARI is {val('C15','Proposed'):.3f} for aSBM-Louvain and {val('C15','Louvain'):.3f} for Louvain. At r=7.5 and noise SD 3, the respective means are {val('C17','Proposed'):.3f} and {val('C17','Louvain'):.3f}.",
-            f"- At r=4, when the high-to-low noise ratio increases from 1 to 3, mean aSBM-Louvain ARI changes from {val('C11','Proposed'):.3f} to {val('C14','Proposed'):.3f}, while mean high-noise community F1 changes from {val('C11','Proposed','high_F1_mean'):.3f} to {val('C14','Proposed','high_F1_mean'):.3f}.",
-        ]
-    lines += [
-        "",
-        "## Paired aSBM-Louvain minus aSBM ARI differences",
-        "",
-        "| Condition | r | RMS noise SD | h | Paired replicates | Mean ARI difference | 95% t interval | MCSE |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | --- | ---: |",
-    ]
-    for row in differences.itertuples():
-        lines.append(
-            f"|{row.condition_id}|{row.r:g}|{row.sigma_rms:g}|{row.high_low_sd_ratio:g}|"
-            f"{row.n_pairs}|{row.difference_mean:+.4f}|"
-            f"[{row.difference_ci95_low:+.4f}, {row.difference_ci95_high:+.4f}]|"
-            f"{row.difference_mcse:.4f}|"
-        )
-    if report["issues"]:
-        lines += ["", "## Validation issues", ""] + ["- " + issue for issue in report["issues"]]
-    (out / "findings.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results",type=Path)
@@ -414,7 +369,6 @@ def main():
     report["issues"]=issues
     (args.out/"analysis_audit.json").write_text(json.dumps(report,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     plots(summary,differences,args.out)
-    findings(summary,differences,report,args.out)
     print(json.dumps({k:v for k,v in report.items() if k not in {"missing_keys","unexpected_keys"}},ensure_ascii=False,indent=2))
     if issues and not args.allow_incomplete:raise SystemExit(2)
 

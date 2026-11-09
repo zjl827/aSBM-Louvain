@@ -114,64 +114,6 @@ fig.suptitle('Distribution misspecification: mean ± sample SD\n10 repeats (succ
 fig.legend(*axes[0,0].get_legend_handles_labels(),loc='lower center',ncol=4,frameon=False)
 fig.tight_layout(rect=(0,.05,1,.93));fig.savefig(OUT/'distribution_comparison.png',dpi=180);fig.savefig(OUT/'distribution_comparison.pdf');plt.close(fig)
 
-def cell(row,metric='ARI'):
-    n=int(row[f'{metric}_n'])
-    if not n:return 'Failed (0/10)'
-    if n==1:return f"{row[f'{metric}_mean']:.3f} (n=1/10, SD unavailable)"
-    s=f"{row[f'{metric}_mean']:.3f} ± {row[f'{metric}_sd']:.3f}"
-    return s+(f' (n={n}/10)' if n!=10 else '')
-def table(headers,rows):
-    return '\n'.join(['| '+' | '.join(headers)+' |','|'+'|'.join(['---']*len(headers))+'|']+['| '+' | '.join(map(str,row))+' |' for row in rows])
-md=['# Attribute likelihood weights and non-Gaussian attributes','',
-    'Tables report mean ± sample SD across ten replicates per condition. The likelihood-weight study gives 720 records and the distribution study gives 640. They share 160 Gaussian reference records, giving 1,200 unique records across 200 condition-replicate pairs. Conditions sharing draws are paired within replicates.','',
-    'K-means uses iter.max=10 in both studies. The β=1 fit matches the default implementation. The β=0 fit uses attributes in its initialization.','',
-    '## Fit status','']
-rows=[]
-for method,g in raw.groupby('method',sort=False):
-    rows.append([method,len(g),g.status.eq('ok').sum(),g.status.eq('error').sum(),int((g.met_stopping_rule.astype(str).str.lower()=='false').sum()),int(g.warnings.notna().sum())])
-md += [table(['Method','Records','Returned','Errors','Stopping rule not met','Fits with warnings'],rows),'',
-       f"{raw.drop_duplicates(['condition_id','rep']).init_warnings.notna().sum()} of 200 condition-replicate initializations issued a warning. All weights on a given input share its initialization. The aSBM baseline exits if its objective does not increase.",'',
-       'Scores are missing for failed fits. Means and SDs use the returned fits and display the available count where it differs from ten.','']
-if (~good).any():
-    failures=raw[~good].groupby(['distribution','r','sigma','h','method','error'],dropna=False).size().reset_index(name='count')
-    md += [table(['Distribution','r','σ','h','Method','Error','Count'],failures.values.tolist()),'']
-capped=raw[raw.stop_reason.isin(['safety_cap','iteration_cap','timeout'])]
-if len(capped):
-    md += ['The summaries include the following returned partitions from fits that reached a limit.','',
-           table(['Condition','Replicate','Method','β','ARI','Iterations','Stop reason'],
-                 capped[['condition_id','rep','method','beta','ARI','iterations','stop_reason']].values.tolist()),'']
-for metric in ['ARI','NMI']:
-    md += [f'## Likelihood weights ({metric})','']
-    rows=[]
-    for _,c in grid[grid.weight_study].iterrows():
-        s=summary[(summary.condition_id==c.condition_id)&(summary.method=='Proposed')].set_index('beta')
-        rows.append([c.condition_id,f'{c.r:g}',f'{c.sigma:g}',f'{c.h:g}']+[cell(s.loc[b],metric) for b in BETAS])
-    md += [table(['Condition','r','σ','h']+[f'β={b:g}' for b in BETAS],rows),'']
-    rows=[]
-    for _,c in grid[grid.weight_study].iterrows():
-        s=summary[(summary.condition_id==c.condition_id)&(summary.method!='Proposed')].set_index('method')
-        rows.append([c.condition_id]+[cell(s.loc[m],metric) for m in METHODS[1:]])
-    md += ['Unweighted reference fits on the same inputs','',table(['Condition']+METHODS[1:],rows),'']
-    md += [f'## Attribute distributions ({metric})','']
-    rows=[]
-    for _,c in grid[grid.misspecification_study].sort_values(['r','sigma','distribution']).iterrows():
-        s=summary[(summary.condition_id==c.condition_id)&((summary.method!='Proposed')|summary.beta.eq(1))].set_index('method')
-        rows.append([c.condition_id,f'{c.r:g}',f'{c.sigma:g}',c.distribution]+[cell(s.loc[m],metric) for m in METHODS])
-    md += [table(['Condition','r','σ','Distribution']+METHODS,rows),'']
-md += ['## Paired ARI differences from β=1','',
-       'Intervals are pointwise 95% Student-t intervals across the paired replicate indices.','']
-p=pairs[(pairs.kind=='beta_minus_1')&(pairs.metric=='ARI')&(pairs.beta!=1)]
-md += [table(['Condition','β','Paired replicates','ΔARI','95% interval'],[[v.condition_id,f'{v.beta:g}',v.n,f'{v["mean"]:+.4f}',f'[{v.ci95_low:+.4f}, {v.ci95_high:+.4f}]'] for _,v in p.iterrows()]),'',
-       '## Paired aSBM-Louvain ARI differences from Gaussian residuals','']
-p=pairs[(pairs.kind=='distribution_minus_gaussian')&(pairs.metric=='ARI')&(pairs.method=='Proposed')]
-md += [table(['r','σ','Distribution','Paired replicates','ΔARI','95% interval'],[[f'{v.r:g}',f'{v.sigma:g}',v.distribution,v.n,f'{v["mean"]:+.4f}',f'[{v.ci95_low:+.4f}, {v.ci95_high:+.4f}]'] for _,v in p.iterrows()]),'',
-       '## Output files','',
-       '- [Per-fit results](raw_metrics.csv)',
-       '- [Condition summaries](condition_method_summary.csv)',
-       '- [Paired differences](paired_summary.csv)',
-       '- [Failed fits](failure_records.csv)','',
-       '![Likelihood-weight study](weight_sensitivity.png)','', '![Non-Gaussian attribute study](distribution_comparison.png)','']
-(OUT/'complete_results.md').write_text('\n'.join(md))
 audit=dict(records=len(raw),instances=200,proposed_fits=600,errors=int((~good).sum()),
            initialization_warnings=int(raw.drop_duplicates(['condition_id','rep']).init_warnings.notna().sum()),
            pairing_checks='passed',metrics_bounds='passed',planned_grid_completeness='passed')
