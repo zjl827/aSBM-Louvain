@@ -1,20 +1,34 @@
-# S10 real-data graph and attribute orientation
+# STARmap and MERFISH
 
-From the release root, install the R packages `igraph`, `Matrix`, `mclust` and `mvtnorm`. Input preparation also needs Python with `h5py`, `numpy`, `pandas` and `scikit-learn`. Set `REVISION_PYTHON` if that environment uses a command other than `python3`.
-
-The two processed files already in the parent project checkout are `starmap_PCA_scores_50PCs.csv` and `coord_and_pc_19.RData`. The default processed input directory is `..`. Use `--processed-dir` to point to another copy.
-
-Place these separately obtained files in `data/realdata/` or pass their directory as `--input-dir`.
+Install the [experiment dependencies](../../README.md#setup). The repository root contains `starmap_PCA_scores_50PCs.csv` and `coord_and_pc_19.RData`. Put these additional files in `reproduction/data/realdata` or pass `--input-dir` when running `prepare.R`.
 
 - [STARmap H5AD](http://sdmbench.drai.cn/tcm/download/?file_path=/mnt/JINGD/data/file/sdmbench/db/STARmap_20180505_BY3_1k.h5ad), saved as `STARmap_20180505_BY3_1k.h5ad`.
-- [STARmap cell-type annotations](https://drive.google.com/drive/folders/1I1nxheWlc2RXSdiv24dex3YRaEh78Omy?usp=sharing), saved as `Annotation_STARmap_20180505_BY3_1k.txt`. This tab-delimited file supplies 16 cell types via its `Annotation` column and the aligned X/Y coordinates. The H5AD supplies the coordinates for the spatial graph. The cell-type scores use the annotation file.
-- [MERFISH H5AD](http://sdmbench.drai.cn/tcm/download/?file_path=/mnt/JINGD/data/file/sdmbench/db/MERFISH_0.19.h5ad), saved as `MERFISH_0.19.h5ad`. The 5,803 cells are aligned to the processed PCs by ID. The reference uses the H5AD's `cell_class` field (15 types).
+- [STARmap cell-type annotations](https://drive.google.com/drive/folders/1I1nxheWlc2RXSdiv24dex3YRaEh78Omy?usp=sharing), saved as `Annotation_STARmap_20180505_BY3_1k.txt`.
+- [MERFISH H5AD](http://sdmbench.drai.cn/tcm/download/?file_path=/mnt/JINGD/data/file/sdmbench/db/MERFISH_0.19.h5ad), saved as `MERFISH_0.19.h5ad`. The reference labels use its `cell_class` field.
+
+Run from `reproduction/`.
 
 ```sh
 Rscript experiments/realdata_current/prepare.R
 Rscript experiments/realdata_current/run.R
 ```
 
-Preparation writes four input RDS files and two nested expression kNN lists under `results/realdata_current/inputs`. They are also consumed by the real-data S7, S10 timing, S11 and S12 runners. Set `REVISION_REALDATA_DIR` or use `--output-dir` when preparing an alternate location. Each RDS contains `adjacency`, `attributes`, `truth`, `cell_ids`, and `resolution` along with the input definitions. The preparation uses symmetrized Euclidean 6NN graphs in unscaled PCA or spatial coordinates and column-standardized attributes in the opposite modality. The top-12 CSVs use the same PCA cell order, exclude self and index neighbors from one.
+Preparation writes the four graph/attribute inputs and two expression neighbor lists to `results/realdata_current/inputs`. Set `REVISION_REALDATA_DIR` in the runners if you use `--output-dir` to prepare the inputs elsewhere. The run script accepts `smoke` for one STARmap repeat. Use `REVISION_REALDATA_OUT` for a separate results directory.
 
-The full run fits four methods with ten algorithmic repeats on each of the four fixed inputs. Proposed and Pure-aSBM share estimated-K attribute K-means initialization (5 starts, 10 iterations), seeds `20260901 + rep`, and the post-initialization RNG stream. The ordinary Louvain baseline uses the original sorted-cell order, resolution 1 and seeds `123 + rep`. Proposed uses resolution 1.5 for STARmap and 0.5 for MERFISH. Pure-aSBM uses the vectorized R implementation. The `smoke` positional option runs the first STARmap primary-orientation repeat. Results and restart checkpoints go in `results/realdata_current` or `REVISION_REALDATA_OUT`. Set `REVISION_REALDATA_OUT` to a fresh directory for a smoke run or when the code or inputs differ from saved checkpoints.
+## BACT and SpaGCN
+
+The [baseline scripts](../../../realdata_experiments/) read inputs from the repository root. Install [BACT](https://github.com/yinqiaoyan/BACT) for the R scripts. The Python scripts use [SpaGCN](https://github.com/jianhuupenn/SpaGCN), PyTorch, anndata, and the Python analysis dependencies.
+
+| Dataset | BACT inputs in addition to the bundled PCs | SpaGCN inputs |
+| --- | --- | --- |
+| STARmap | `starmap_spatial.csv`, `Annotation_STARmap_20180505_BY3_1k.txt` | `starmap_spatial.csv`, `starmap_counts.csv`, `Annotation_STARmap_20180505_BY3_1k.txt` |
+| MERFISH | `cell_type_annotation_0.19.csv` | `cell_type_annotation_0.19.csv`, `merfish19_spatial.csv`, `merfish19_counts.csv` |
+
+Run from the repository root:
+
+```sh
+Rscript realdata_experiments/starmap_bact_pca_coord_input_10runs.R
+Rscript realdata_experiments/merfish_bact_pc_coord_input_10runs.R
+python3 realdata_experiments/starmap_spagcn_expression_coord_input_10runs.py
+python3 realdata_experiments/merfish_spagcn_expression_coord_input_10runs.py
+```

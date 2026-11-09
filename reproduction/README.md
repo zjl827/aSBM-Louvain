@@ -1,84 +1,95 @@
-# aSBM-Louvain experiment guide
-
-This directory contains the scripts for the balanced simulations and the experiments in the Supplementary Material. Run the commands below from this directory.
+# Paper experiments
 
 ## Setup
 
-The experiments used R 4.5.2 with igraph 2.2.2, Matrix 1.7-4, mvtnorm 1.3-5, and mclust 6.1.2. Matching R and igraph versions matters because several designs use seeded Louvain partitions. Install the R dependencies and the Python packages used by the analysis scripts.
+Run the commands from the `reproduction/` directory. The experiments used R 4.5.2, igraph 2.2.2, Matrix 1.7-4, mvtnorm 1.3-5, and mclust 6.1.2. Matching R and igraph versions helps reproduce seeded Louvain partitions.
 
 ```r
 install.packages(c("igraph", "Matrix", "mvtnorm", "mclust"))
 ```
 
-```bash
+```sh
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 ```
 
-## Implementation
-
-The experiment scripts load the repository's `asbm_louvain.R` and call `aSBM_Louvain_revised()`. The standard configuration uses attribute K-means initialization with a Louvain estimate of the number of groups, prior feedback, and the joint stopping rule. Each runner sets the parameters specific to its experiment. [Algorithm source](../asbm_louvain.R)
-
-The aSBM baseline in `code/pure_asbm_vectorized.R` preserves the per-pair denominator floor using the vectorized R implementation. For a fresh run, use an output directory without checkpoints from another version.
+Use separate output directories for partial runs and full runs. Use a fresh directory when the code or inputs differ from saved checkpoints. For runners that use forked R workers, set the worker count to one on Windows.
 
 ## Balanced simulations
 
-`experiments/main_simulations/tasks.csv` records 48 settings across A1–A3 and B1–B3, each with 10 data replicates. Each data replicate regenerates the network and attributes, including community means. The two attributed models start from the same partition and post-initialization random-number state. The standalone K-means reference uses the planted number of groups.
+The [task grid](experiments/main_simulations/tasks.csv) contains 48 settings with ten independent data replicates each. The two attributed fits share an initialization. The standalone K-means reference uses the planted community count.
 
-```bash
-# Quick check of one case, with four ARI values
-Rscript experiments/main_simulations/run.R S01_rep01
-
-# Full design and figures
+```sh
 Rscript experiments/main_simulations/run.R
 python3 experiments/main_simulations/plot_results.py
 ```
 
-The accuracy-only aSBM fits can take substantially longer than the other methods. The runner saves one checkpoint per case under `outputs/main_simulations/runs/` and resumes from completed checkpoints. Set `MAIN_SIM_OUTPUT` to use a separate output directory and pass the resulting CSV to the plotting script with `--metrics`. The analysis writes a table and the six ARI panels using means and sample standard deviations over the data replicates.
+Append case IDs such as `S01_rep01` to run a subset and set `MAIN_SIM_OUTPUT` to a separate directory. The runner defaults to `outputs/main_simulations` and resumes completed cases. To plot a full run from another location, set `MAIN_SIM_OUTPUT` for the runner and pass its `raw_metrics.csv` to the plotter with `--metrics`.
 
 ## Supplementary experiments
 
-| Section | Experiment | Directory |
-| --- | --- | --- |
-| S2 | Unequal community sizes | [unequal_sizes](experiments/unequal_sizes/) |
-| S3 | Joint signal strength and community-dependent noise | [joint_signals](experiments/joint_signals/) |
-| S4, S8 | Non-Gaussian noise and attribute likelihood weighting | [weight_misspecification](experiments/weight_misspecification/) |
-| S5 | Attribute dimension | [dimension_pilot](experiments/dimension_pilot/), [dimension_extension](experiments/dimension_extension/) |
-| S6 | Initialization stability | [initialization_stability](experiments/initialization_stability/) |
-| S7 | Prior feedback | [prior_feedback](experiments/prior_feedback/) |
-| S9 | DANCer comparison with I-Louvain | [ilouvain_current](experiments/ilouvain_current/) |
-| S10 | Graph construction, real-data accuracy, and runtime | [realdata_current](experiments/realdata_current/), [timing_current](experiments/timing_current/) |
-| S11 | Resolution and parameter sensitivity | [parameter_sensitivity](experiments/parameter_sensitivity/) |
-| S12 | Conditional graph bootstrap | [graph_bootstrap](experiments/graph_bootstrap/) |
+```sh
+# S2. Unequal community sizes
+Rscript experiments/unequal_sizes/run.R results/unequal_sizes
 
-The joint-signal, noise, dimension, and initialization experiments generate their inputs from the included designs and seeds. The other directories have their own setup and run commands. Start with the real-data preparation before running the real-data branches of S7, S10, S11, and S12.
-
-```bash
+# S3. Joint signal strength and community-dependent noise
 Rscript experiments/joint_signals/run.R
 python3 experiments/joint_signals/analyze.py
 
-# Run once for both S4 and S8.
+# S4 and S8. Non-Gaussian attributes and attribute likelihood weights
 Rscript experiments/weight_misspecification/run.R
 python3 experiments/weight_misspecification/analyze.py
 
-# The dimension extension uses the pilot inputs and results.
+# S5. Attribute dimension. The extension reads the pilot cache and results.
 Rscript experiments/dimension_pilot/run.R
 Rscript experiments/dimension_pilot/analyze.R
 Rscript experiments/dimension_extension/run.R
 Rscript experiments/dimension_extension/analyze.R
 
+# S6. Initialization stability
 python3 experiments/initialization_stability/prepare.py
 INIT_STAGE=full Rscript experiments/initialization_stability/run.R
 python3 experiments/initialization_stability/analyze.py
+
+# S7. Prior feedback. Use balanced for simulations, real or all after data setup below.
+Rscript experiments/prior_feedback/run.R results/prior_feedback balanced
 ```
 
-For a quick run, use a separate output directory and set `PILOT_SMOKE=1`, `WM_SMOKE=1`, `DIM_SMOKE=1`, or `INIT_STAGE=smoke` for the corresponding runner. The full-design analysis scripts expect all replicates. Where an R runner uses forked workers, set its worker count to one on Windows.
+### S9. DANCer and I-Louvain
 
-The [synthetic I-Louvain probe](experiments/ilouvain_synthetic/) and [finite potential diagnostics](experiments/potential_diagnostics/) reproduce additional checks of clustering and potential trajectories.
+Use the [benchmark repository at commit 515bf25](https://github.com/changliu94/attributed-community-detection/tree/515bf251458be543cee43f27eb234bcef544ac4f). Keep its graphs and I-Louvain implementation in a separate checkout.
 
-## Data and outputs
+```sh
+python3 experiments/ilouvain_current/prepare.py --source-dir /path/to/benchmark/dataset --output-dir data/dancer
+Rscript experiments/ilouvain_current/run_proposed.R
+python3 experiments/ilouvain_current/run_baseline.py --ilouvain-code /path/to/benchmark/src/IL.py
+Rscript experiments/ilouvain_current/summarize.R
+```
 
-The synthetic experiments generate their data locally. For the fixed datasets, follow the corresponding directory's instructions to prepare the inputs using the existing repository's preprocessed files and the public data sources. Generated outputs, additional data downloads, and compiled libraries are excluded from version control.
+### S10–S12. Real-data experiments and graph bootstrap
 
-An independent data replicate is the unit for the simulation ARI summaries. On a fixed graph and attribute matrix, variation across repeated runs reflects the algorithm's randomness. See the individual experiment protocols for paired comparisons and graph-bootstrap anchors.
+Prepare the [STARmap and MERFISH inputs](experiments/realdata_current/README.md) before running the real-data part of S7 or any of S10–S12. S11 also uses the ordered neighbor lists from that preparation.
+
+```sh
+# S10. Graph construction, real-data accuracy, and matched runtime
+Rscript experiments/realdata_current/run.R
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 BLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+Rscript experiments/timing_current/run.R
+
+# S11. Resolution and parameter sensitivity
+Rscript experiments/parameter_sensitivity/run.R results/parameter_sensitivity
+
+# S12. Conditional graph bootstrap
+Rscript experiments/graph_bootstrap/run.R
+python3 experiments/graph_bootstrap/summarize.py
+```
+
+The timing and bootstrap runners accept `smoke` without real-data inputs. For bootstrap smoke summaries, pass `--input-dir results/graph_bootstrap/smoke --expected-sources 1 --expected-b 1` to `summarize.py`.
+
+### Additional checks
+
+```sh
+Rscript experiments/ilouvain_synthetic/run.R /path/to/benchmark/src/IL.py results/ilouvain_synthetic
+Rscript experiments/potential_diagnostics/run.R results/potential_diagnostics
+```
